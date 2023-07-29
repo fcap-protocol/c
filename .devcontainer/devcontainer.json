@@ -1,0 +1,16 @@
+{
+  "name": "FCAP C Dev",
+  "image": "mcr.microsoft.com/devcontainers/cpp",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.cpptools-extension-pack",
+        "streetsidesoftware.code-spell-checker"
+      ]
+    }
+  },
+
+  "forwardPorts": [
+    3000
+  ]
+}
