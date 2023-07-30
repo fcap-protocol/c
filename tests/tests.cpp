@@ -4,9 +4,9 @@ extern "C" {
 #include <fcap.h>
 }
 
-TEST(MultiplyTests, TestIntegerOne_One) {
+TEST(MultiplyTests, basic) {
     const auto expected = 1;
-    const auto actual = multiply(1, 1);
+    const auto actual = multiply(5, 10);
     ASSERT_EQ(expected, actual);
 }
 
