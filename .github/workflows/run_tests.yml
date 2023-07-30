@@ -19,10 +19,8 @@ jobs:
         with:
           # Change this to be your CI task/script
           runCmd: |
-            pwd
-            ls
-            cat ./include/fcap.h
-            /usr/bin/cmake --no-warn-unused-cli -DCMAKE_TOOLCHAIN_FILE=/usr/local/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -DCMAKE_BUILD_TYPE:STRING=Debug -DCMAKE_C_COMPILER:FILEPATH=/usr/bin/gcc -DCMAKE_CXX_COMPILER:FILEPATH=/usr/bin/g++ -S . -B ./build -G Ninja
-            /usr/bin/cmake -S . -B ./build -G Ninja
-            /usr/bin/cmake --build  ./build --config Debug --target all --
+            /usr/bin/cmake --no-warn-unused-cli -DCMAKE_TOOLCHAIN_FILE=/usr/local/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -DCMAKE_BUILD_TYPE:STRING=Debug -DCMAKE_C_COMPILER:FILEPATH=/usr/bin/gcc -DCMAKE_CXX_COMPILER:FILEPATH=/usr/bin/g++ -S /workspaces/c -B /workspaces/c/build -G Ninja
+            /usr/bin/cmake -S /workspaces/c -B /workspaces/c/build -G Ninja
+            /usr/bin/cmake --build  /workspaces/c/build --config Debug --target all --
+            cd /workspaces/c/build
             /usr/bin/ctest -j10 -C Debug -T test --output-on-failure -R ^FcapTest$
