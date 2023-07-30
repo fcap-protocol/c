@@ -18,5 +18,7 @@ jobs:
         with:
           # Change this to be your CI task/script
           runCmd: |
+            /usr/bin/cmake -S/workspaces/c -B/workspaces/c/build -G Ninja
             /usr/bin/cmake --no-warn-unused-cli -DCMAKE_TOOLCHAIN_FILE=/usr/local/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -DCMAKE_BUILD_TYPE:STRING=Debug -DCMAKE_C_COMPILER:FILEPATH=/usr/bin/gcc -DCMAKE_CXX_COMPILER:FILEPATH=/usr/bin/g++ -S/workspaces/c -B/workspaces/c/build -G Ninja
-             /usr/bin/cmake --build /workspaces/c/build --config Debug --target all --
+            /usr/bin/cmake --build /workspaces/c/build --config Debug --target all --
+            /usr/bin/ctest -j10 -C Debug -T test --output-on-failure -R ^FcapTest$
