@@ -10,7 +10,7 @@ include_directories(include)
 
 add_library(fcap src/fcap.c)
 
-# # Make the tests
+# Make the tests
 enable_testing()
 find_package(GTest CONFIG REQUIRED)
 
