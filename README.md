@@ -1,3 +1,5 @@
+![CTest](https://github.com/fcap-protocol/c/actions/workflows/run_tests.yml/badge.svg)
+
 # c
 The C Language implementation of the FCAP protocol
 
