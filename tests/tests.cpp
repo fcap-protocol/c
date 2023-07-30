@@ -5,7 +5,7 @@ extern "C" {
 }
 
 TEST(MultiplyTests, basic) {
-    const auto expected = 1;
+    const auto expected = 50;
     const auto actual = multiply(5, 10);
     ASSERT_EQ(expected, actual);
 }
