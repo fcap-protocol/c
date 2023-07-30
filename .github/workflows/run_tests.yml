@@ -1,5 +1,5 @@
-name: 'build' 
-on: # rebuild any PRs and main branch changes
+name: 'Unit Tests' 
+on:
   pull_request:
   push:
     branches:
@@ -17,7 +17,6 @@ jobs:
       - name: Build and run dev container task
         uses: devcontainers/ci@v0.3
         with:
-          # Change this to be your CI task/script
           runCmd: |
             /usr/bin/cmake --no-warn-unused-cli -DCMAKE_TOOLCHAIN_FILE=/usr/local/vcpkg/scripts/buildsystems/vcpkg.cmake -DCMAKE_EXPORT_COMPILE_COMMANDS:BOOL=TRUE -DCMAKE_BUILD_TYPE:STRING=Debug -DCMAKE_C_COMPILER:FILEPATH=/usr/bin/gcc -DCMAKE_CXX_COMPILER:FILEPATH=/usr/bin/g++ -S /workspaces/c -B /workspaces/c/build -G Ninja
             /usr/bin/cmake -S /workspaces/c -B /workspaces/c/build -G Ninja
