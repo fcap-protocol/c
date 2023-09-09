@@ -167,13 +167,16 @@ int fcap_encode_packet(FPacket src, uint8_t *dest, size_t dest_len)
  * @returns 0 on success or -FCAP_ERROR on failure
  * @note -EINVAL will be returned if adding a key that already exists
  */
-int fcap_add_key(FPacket pkt, FKey key, FType type, uint8_t *value, size_t size)
+int fcap_add_key(FPacket pkt, FKey key, FType type, void *value, size_t size)
 {
 	int key_i;
 	size_t idx;
 	bool found;
 	size_t value_size;
 	struct fcap_ktv *view;
+
+	/* TODO: Check there is enough bytes remaining in the packet 
+	to add this value safely */
 
 	view = (struct fcap_ktv *)pkt->ktv_bytes;
 
@@ -193,9 +196,13 @@ int fcap_add_key(FPacket pkt, FKey key, FType type, uint8_t *value, size_t size)
 	view->key = key;
 	view->type = type;
 
-	if (type == FCAP_BINARY)
+	if (type == FCAP_BINARY) {
 		value_size = size;
-	else {
+		view->value.binary.length = size;
+		if (!memcpy(view->value.binary.value, value, value_size))
+			return -FCAP_ENOMEM;
+
+	} else {
 		value_size = fcap_type_sizes[type];
 
 		/* 
@@ -204,10 +211,10 @@ int fcap_add_key(FPacket pkt, FKey key, FType type, uint8_t *value, size_t size)
 		 */
 		if (size != value_size)
 			return -FCAP_EINVAL;
-	}
 
-	if (!memcpy(view->value.value, value, value_size))
-		return -FCAP_ENOMEM;
+		if (!memcpy(view->value.value, value, value_size))
+			return -FCAP_ENOMEM;
+	}
 
 	pkt->header.num_keys++;
 
@@ -221,8 +228,10 @@ int fcap_add_key(FPacket pkt, FKey key, FType type, uint8_t *value, size_t size)
  * @param data an output buffer for the value to be placed in
  * @param size the size of the output buffer
  * @returns the FType of the key on success or -FCAP_ERROR on failure
+ * @note when the key type is binary, the first byte of the data buffer 
+ * will be the length of the remaining data 
  */
-int fcap_get_key(FPacket pkt, FKey key, uint8_t *data, size_t size)
+int fcap_get_key(FPacket pkt, FKey key, void *data, size_t size)
 {
 	int key_i;
 	size_t idx;
@@ -249,6 +258,8 @@ int fcap_get_key(FPacket pkt, FKey key, uint8_t *data, size_t size)
 		return -FCAP_ENOKEY;
 
 	value_size = fcap_get_value_size(view);
+	if (view->type == FCAP_BINARY)
+		value_size++;
 
 	if (size < value_size)
 		return -FCAP_ENOMEM;
