@@ -4,7 +4,6 @@ extern "C" {
 #include <fcap.h>
 }
 
-using namespace std;
 
 TEST(FCAP_TESTS, basic) {
     int ret;
@@ -14,11 +13,6 @@ TEST(FCAP_TESTS, basic) {
     uint8_t sent_val = 13; 
     ret = fcap_add_key(pkt, KEY_A, FCAP_UINT8, &sent_val, sizeof(sent_val));
     ASSERT_EQ(ret, 0);
-
-    for (int i = 0; i < 10; i++) {
-        cout << bytes[i] << " ";
-    }
-    cout << endl;
 
     uint8_t recv_val;
     ret = fcap_get_key(pkt, KEY_A, &recv_val, sizeof(recv_val));

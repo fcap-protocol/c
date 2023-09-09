@@ -14,8 +14,9 @@ add_library(fcap src/fcap.c)
 enable_testing()
 find_package(GTest CONFIG REQUIRED)
 
+add_executable(fcap_sample tests/sample.c)
+target_link_libraries(fcap_sample fcap)
+
 add_executable(fcap_tests tests/tests.cpp)
 target_link_libraries(fcap_tests fcap GTest::gtest GTest::gtest_main GTest::gmock GTest::gmock_main)
 add_test(FcapTest fcap_tests)
-
-

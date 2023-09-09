@@ -186,7 +186,7 @@ int fcap_add_key(FPacket pkt, FKey key, FType type, uint8_t *value, size_t size)
     if (size != fcap_type_sizes[type])
         return -FCAP_EINVAL;
 
-    if (!memcmp(view->value.value, value, fcap_type_sizes[view->type]))
+    if (!memcpy(view->value.value, value, fcap_type_sizes[view->type]))
         return -FCAP_ENOMEM;
 
     pkt->header.num_keys++;
@@ -239,7 +239,7 @@ int fcap_get_key(FPacket pkt, FKey key, uint8_t *data, size_t size) {
             return -FCAP_ENOMEM;
     }
 
-    if (!memcmp(data, view->value.value, fcap_type_sizes[view->type]))
+    if (!memcpy(data, view->value.value, fcap_type_sizes[view->type]))
         return -FCAP_ENOMEM;
 
     return view->type;
