@@ -13,6 +13,7 @@ typedef enum fcap_error {
     FCAP_ENOMEM,
     FCAP_EEXIST,
     FCAP_EINVAL,
+    FCAP_ENOKEY,
 } FERROR;
 
 typedef enum fcap_type {
@@ -66,11 +67,10 @@ typedef enum fcap_key {
 extern FERROR fcap_send_bytes(uint8_t *bytes, size_t length);
 
 /* Creating & Sending Packets */
-FPacket fcap_start_packet();
-FERROR fcap_send_packet(FPacket pkt);
+FPacket fcap_init_packet();
 
-FERROR fcap_add_key(FPacket pkt, FKey key, uint8_t *data, size_t length);
-
+int fcap_add_key(FPacket pkt, FKey key, FType type, uint8_t *value, size_t size);
+int fcap_get_key(FPacket pkt, FKey key, uint8_t *data, size_t size);
 // FERROR fcap_add_key(FPacket pkt, FKey key, FType type, void *value);
 
 // FERROR fcap_add_key_u8(FPacket pkt, FCAP_Key key, uint8_t data);
