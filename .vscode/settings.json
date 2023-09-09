@@ -69,5 +69,8 @@
         "FCAP",
         "KTVS",
         "vcpkg"
+    ],
+    "editor.rulers": [
+        80
     ]
 }
