@@ -3,6 +3,14 @@
 #include <stdbool.h>
 #include <string.h>
 
+/* For debug only */
+#define DEBUG
+
+#ifdef DEBUG
+#include <stdio.h>
+#endif /* DEBUG */
+
+
 #define FCAP_VERSION 0
 
 /* Protocol defined sizes */
@@ -70,6 +78,108 @@ FPacket fcap_init_packet() {
 
     return &packet;
 }
+
+#ifdef DEBUG
+/**
+ * @brief displays info about a given ktv
+ * @returns 0 on success or -FCAP_ERROR on failure
+ */
+void fcap_debug_ktv(uint8_t *bytes, size_t max_size) {
+    struct fcap_ktv_view *view = (struct fcap_ktv_view *)bytes;
+
+    if (max_size < 1) {
+        printf("Not enough bytes to read KTV Header");
+        return;
+    }
+    printf("Key: %d\n", view->key);
+    printf("Type: %d ", view->type);
+    max_size--;
+
+    if (max_size < fcap_type_sizes[view->type]) {
+        printf("Not enough bytes, only %ld remaining.\n", max_size);
+        return;
+    }
+
+    switch (view->type) {
+        case FCAP_BINARY: {
+            printf("(binary)\n");
+
+            if (max_size < 1) {
+                printf("Not enough bytes to read binary length!\n");
+                return;
+            }
+
+            size_t len = view->value.binary.length;
+            max_size--;
+            printf("Length: %ld\n", len);
+
+            if (max_size < len) {
+                printf("Not enough bytes to read binary.");
+                printf("Only %ld remaining bytes\n", max_size);
+            }
+
+            printf("Binary (hex): ");
+            for (int i = 0; i < len; i++) {
+                printf("%02x ", view->value.binary.value[i]);
+            }
+            break;
+        }
+        case FCAP_UINT8: {
+            printf("(uint8)\n");
+            uint8_t *value;
+            value = view->value.value;
+            printf("Value: %d\n", *value);
+            break;
+        }
+        case FCAP_UINT16: {
+            printf("(uint16)\n");
+            uint16_t *value;
+            value = (uint16_t *)view->value.value;
+            printf("Value: %d\n", *value);
+            break;
+        }
+        case FCAP_INT16: {
+            printf("(int16)\n");
+            int16_t *value;
+            value = (int16_t *)view->value.value;
+            printf("Value: %d\n", *value);
+            break;
+        }
+        case FCAP_INT32: {
+            printf("(int32)\n");
+            int32_t *value;
+            value = (int32_t *)view->value.value;
+            printf("Value: %d\n", *value);
+            break;
+        }
+        case FCAP_INT64: {
+            printf("(int64)\n");
+            int64_t *value;
+            value = (int64_t *)view->value.value;
+            printf("Value: %ld\n", *value);
+            break;
+        }
+        case FCAP_FLOAT: {
+            printf("(float)\n");
+            float *value;
+            value = (float *)view->value.value;
+            printf("Value: %f\n", *value);
+            break;
+        }
+        case FCAP_DOUBLE: {
+            printf("(double)\n");
+            double *value;
+            value = (double *)view->value.value;
+            printf("Value: %lf\n", *value);
+            break;
+        }
+        default:
+            printf("Unknown Type!\n");
+            break;
+    }
+}
+#endif /* DEBUG */
+
 
 // FERROR fcap_decode_packet(FPacket dest, uint8_t *src, int src_len) {
 //     int i;
@@ -160,12 +270,11 @@ int fcap_add_key(FPacket pkt, FKey key, FType type, uint8_t *value, size_t size)
     struct fcap_ktv_view *view;
     size_t idx = 0;
     bool found = false;
-    
+
     view = (struct fcap_ktv_view *)&pkt->ktv_bytes[0];
 
     /* Find the end of the packets or if key exists */
     for (count = 0; count < pkt->header.num_keys; count++) {
-        
         /* Check if the key already exists */
         if (view->key == key) {
             return -FCAP_EINVAL;
@@ -180,6 +289,7 @@ int fcap_add_key(FPacket pkt, FKey key, FType type, uint8_t *value, size_t size)
     }
 
     /* Copy the type */
+    view->key = key;
     view->type = type;
 
     /* Check they are passing in the correct length for the type they asked for */
@@ -212,7 +322,6 @@ int fcap_get_key(FPacket pkt, FKey key, uint8_t *data, size_t size) {
 
     /* Find the end of the packets or if key exists */
     for (count = 0; count < pkt->header.num_keys; count++) {
-
         if (view->key == key) {
             found = true;
             break;
