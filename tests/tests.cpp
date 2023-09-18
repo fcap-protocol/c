@@ -237,6 +237,118 @@ TEST(FCAP_TESTS, basic_binary)
 
 }
 
+TEST(FCAP_TESTS, safe_uint8)
+{
+	int ret;
+	uint8_t recv_val;
+	uint8_t sent_val = 10;
+	FPacket pkt = fcap_init_packet();
+
+	ret = fcap_add_key_u8(pkt, KEY_A, sent_val);
+	ASSERT_EQ(ret, 0);
+
+	ret = fcap_get_key_u8(pkt, KEY_A, &recv_val);
+	ASSERT_EQ(ret, 0);
+
+	ASSERT_EQ(recv_val, sent_val);
+}
+
+TEST(FCAP_TESTS, safe_uint16)
+{
+	int ret;
+	uint16_t recv_val;
+	uint16_t sent_val = 10;
+	FPacket pkt = fcap_init_packet();
+
+	ret = fcap_add_key_u16(pkt, KEY_A, sent_val);
+	ASSERT_EQ(ret, 0);
+
+	ret = fcap_get_key_u16(pkt, KEY_A, &recv_val);
+	ASSERT_EQ(ret, 0);
+	
+	ASSERT_EQ(recv_val, sent_val);
+}
+
+TEST(FCAP_TESTS, safe_int16)
+{
+	int ret;
+	int16_t recv_val;
+	int16_t sent_val = -10;
+	FPacket pkt = fcap_init_packet();
+
+	ret = fcap_add_key_i16(pkt, KEY_A, sent_val);
+	ASSERT_EQ(ret, 0);
+
+	ret = fcap_get_key_i16(pkt, KEY_A, &recv_val);
+	ASSERT_EQ(ret, 0);
+	
+	ASSERT_EQ(recv_val, sent_val);
+}
+
+TEST(FCAP_TESTS, safe_int32)
+{
+	int ret;
+	int32_t recv_val;
+	int32_t sent_val = -10;
+	FPacket pkt = fcap_init_packet();
+
+	ret = fcap_add_key_i32(pkt, KEY_A, sent_val);
+	ASSERT_EQ(ret, 0);
+
+	ret = fcap_get_key_i32(pkt, KEY_A, &recv_val);
+	ASSERT_EQ(ret, 0);
+	
+	ASSERT_EQ(recv_val, sent_val);
+}
+
+TEST(FCAP_TESTS, safe_int64)
+{
+	int ret;
+	int64_t recv_val;
+	int64_t sent_val = -10;
+	FPacket pkt = fcap_init_packet();
+
+	ret = fcap_add_key_i64(pkt, KEY_A, sent_val);
+	ASSERT_EQ(ret, 0);
+
+	ret = fcap_get_key_i64(pkt, KEY_A, &recv_val);
+	ASSERT_EQ(ret, 0);
+	
+	ASSERT_EQ(recv_val, sent_val);
+}
+
+TEST(FCAP_TESTS, safe_float)
+{
+	int ret;
+	float recv_val;
+	float sent_val = 0.1234567;
+	FPacket pkt = fcap_init_packet();
+
+	ret = fcap_add_key_f32(pkt, KEY_A, sent_val);
+	ASSERT_EQ(ret, 0);
+
+	ret = fcap_get_key_f32(pkt, KEY_A, &recv_val);
+	ASSERT_EQ(ret, 0);
+	
+	ASSERT_EQ(recv_val, sent_val);
+}
+
+TEST(FCAP_TESTS, safe_double)
+{
+	int ret;
+	double recv_val;
+	double sent_val = -0.12345671234567;
+	FPacket pkt = fcap_init_packet();
+
+	ret = fcap_add_key_d64(pkt, KEY_A, sent_val);
+	ASSERT_EQ(ret, 0);
+
+	ret = fcap_get_key_d64(pkt, KEY_A, &recv_val);
+	ASSERT_EQ(ret, 0);
+	
+	ASSERT_EQ(recv_val, sent_val);
+}
+
 int main(int argc, char **argv)
 {
 	::testing::InitGoogleTest(&argc, argv);

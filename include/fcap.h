@@ -4,8 +4,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#define FCAP_DEBUG
+#define FCAP_SAFE
+
 #define MTU 512
-#define DEBUG
 
 typedef struct fcap_packet *FPacket;
 
@@ -15,6 +17,7 @@ typedef enum fcap_error {
 	FCAP_EEXIST,
 	FCAP_EINVAL,
 	FCAP_ENOKEY,
+	FCAP_ETYPE,
 } FERROR;
 
 typedef enum fcap_type {
@@ -79,19 +82,32 @@ int fcap_add_key(FPacket pkt, FKey key, FType type, void *value,
 		 size_t size);
 int fcap_get_key(FPacket pkt, FKey key, void *data, size_t size);
 
-// FERROR fcap_add_key(FPacket pkt, FKey key, FType type, void *value);
 
-// FERROR fcap_add_key_u8(FPacket pkt, FCAP_Key key, uint8_t data);
-// FERROR fcap_add_key_u16(FPacket pkt, FCAP_Key key, uint16_t data);
-// FERROR fcap_add_key_i16(FPacket pkt, FCAP_Key key, int16_t data);
-// FERROR fcap_add_key_u32(FPacket pkt, FCAP_Key key, uint32_t data);
-// FERROR fcap_add_key_i32(FPacket pkt, FCAP_Key key, int32_t data);
-// FERROR fcap_add_key_f32(FPacket pkt, FCAP_Key key, float data);
-// FERROR fcap_add_key_d64(FPacket pkt, FCAP_Key key, double data);
+#ifdef FCAP_SAFE
 
-#ifdef DEBUG
+int fcap_add_key_bin(FPacket pkt, FKey key, uint8_t *data, size_t len);
+int fcap_add_key_u8(FPacket pkt, FKey key, uint8_t value);
+int fcap_add_key_u16(FPacket pkt, FKey key, uint16_t value);
+int fcap_add_key_i16(FPacket pkt, FKey key, int16_t value);
+int fcap_add_key_i32(FPacket pkt, FKey key, int32_t value);
+int fcap_add_key_i64(FPacket pkt, FKey key, int64_t value);
+int fcap_add_key_f32(FPacket pkt, FKey key, float value);
+int fcap_add_key_d64(FPacket pkt, FKey key, double value);
+
+int fcap_get_key_bin(FPacket pkt, FKey key, uint8_t *data, size_t len);
+int fcap_get_key_u8(FPacket pkt, FKey key, uint8_t *value);
+int fcap_get_key_u16(FPacket pkt, FKey key, uint16_t *value);
+int fcap_get_key_i16(FPacket pkt, FKey key, int16_t *value);
+int fcap_get_key_i32(FPacket pkt, FKey key, int32_t *value);
+int fcap_get_key_i64(FPacket pkt, FKey key, int64_t *value);
+int fcap_get_key_f32(FPacket pkt, FKey key, float *value);
+int fcap_get_key_d64(FPacket pkt, FKey key, double *value);
+
+#endif /* FCAP_SAFE */
+
+#ifdef FCAP_DEBUG
 void fcap_debug_ktv(uint8_t *bytes, size_t max_size);
 void fcap_debug_packet(FPacket pkt);
-#endif /* DEBUG */
+#endif /* FCAP_DEBUG */
 
 #endif /* FCAP_H_ */

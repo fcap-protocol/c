@@ -4,9 +4,9 @@
 #include <string.h>
 
 /* For debug only */
-#ifdef DEBUG
+#ifdef FCAP_DEBUG
 #include <stdio.h>
-#endif /* DEBUG */
+#endif /* FCAP_DEBUG */
 
 #define FCAP_VERSION 0
 
@@ -270,7 +270,119 @@ int fcap_get_key(FPacket pkt, FKey key, void *data, size_t size)
 	return view->type;
 }
 
-#ifdef DEBUG
+#ifdef FCAP_SAFE
+/*
+ * Statically typed convenience functions, primarily for enforcing compiler safe
+ * usage of library functions
+ */
+
+inline int fcap_add_key_bin(FPacket pkt, FKey key, uint8_t *data, size_t len)
+{
+	return fcap_add_key(pkt, key, FCAP_BINARY, data, len);
+}
+
+inline int fcap_add_key_u8(FPacket pkt, FKey key, uint8_t value)
+{
+	return fcap_add_key(pkt, key, FCAP_UINT8, &value, sizeof(value));
+}
+
+inline int fcap_add_key_u16(FPacket pkt, FKey key, uint16_t value)
+{
+	return fcap_add_key(pkt, key, FCAP_UINT16, &value, sizeof(value));
+}
+
+inline int fcap_add_key_i16(FPacket pkt, FKey key, int16_t value)
+{
+	return fcap_add_key(pkt, key, FCAP_INT16, &value, sizeof(value));
+}
+
+inline int fcap_add_key_i32(FPacket pkt, FKey key, int32_t value)
+{
+	return fcap_add_key(pkt, key, FCAP_INT32, &value, sizeof(value));
+}
+
+inline int fcap_add_key_i64(FPacket pkt, FKey key, int64_t value)
+{
+	return fcap_add_key(pkt, key, FCAP_INT64, &value, sizeof(value));
+}
+
+inline int fcap_add_key_f32(FPacket pkt, FKey key, float value)
+{
+	return fcap_add_key(pkt, key, FCAP_FLOAT, &value, sizeof(value));
+}
+
+inline int fcap_add_key_d64(FPacket pkt, FKey key, double value)
+{
+	return fcap_add_key(pkt, key, FCAP_DOUBLE, &value, sizeof(value));
+}
+
+inline int fcap_get_key_bin(FPacket pkt, FKey key, uint8_t *data, size_t len)
+{
+	if (fcap_get_key(pkt, key, data, len) != FCAP_BINARY)
+		return -FCAP_ETYPE;
+	else
+		return FCAP_ENONE;
+}
+
+inline int fcap_get_key_u8(FPacket pkt, FKey key, uint8_t *value)
+{
+	if (fcap_get_key(pkt, key, value, sizeof(*value)) != FCAP_UINT8)
+		return -FCAP_ETYPE;
+	else
+		return FCAP_ENONE;
+}
+
+inline int fcap_get_key_u16(FPacket pkt, FKey key, uint16_t *value)
+{
+	if (fcap_get_key(pkt, key, value, sizeof(*value)) != FCAP_UINT16)
+		return -FCAP_ETYPE;
+	else
+		return FCAP_ENONE;
+}
+
+inline int fcap_get_key_i16(FPacket pkt, FKey key, int16_t *value)
+{
+	if (fcap_get_key(pkt, key, value, sizeof(*value)) != FCAP_INT16)
+		return -FCAP_ETYPE;
+	else
+		return FCAP_ENONE;
+}
+
+inline int fcap_get_key_i32(FPacket pkt, FKey key, int32_t *value)
+{
+	if (fcap_get_key(pkt, key, value, sizeof(*value)) != FCAP_INT32)
+		return -FCAP_ETYPE;
+	else
+		return FCAP_ENONE;
+}
+
+inline int fcap_get_key_i64(FPacket pkt, FKey key, int64_t *value)
+{
+	if (fcap_get_key(pkt, key, value, sizeof(*value)) != FCAP_INT64)
+		return -FCAP_ETYPE;
+	else
+		return FCAP_ENONE;
+}
+
+inline int fcap_get_key_f32(FPacket pkt, FKey key, float *value)
+{
+	if (fcap_get_key(pkt, key, value, sizeof(*value)) != FCAP_FLOAT)
+		return -FCAP_ETYPE;
+	else
+		return FCAP_ENONE;
+}
+
+inline int fcap_get_key_d64(FPacket pkt, FKey key, double *value)
+{
+	if (fcap_get_key(pkt, key, value, sizeof(*value)) != FCAP_DOUBLE)
+		return -FCAP_ETYPE;
+	else
+		return FCAP_ENONE;
+}
+
+#endif /* FCAP_SAFE */
+
+#ifdef FCAP_DEBUG
 
 /**
  * @brief displays info about a given ktv to stdout
@@ -403,4 +515,4 @@ void fcap_debug_packet(FPacket pkt)
 	}
 }
 
-#endif /* DEBUG */
+#endif /* FCAP_DEBUG */
