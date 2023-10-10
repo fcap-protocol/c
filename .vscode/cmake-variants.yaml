@@ -1,0 +1,26 @@
+buildType:
+  default: debug
+  choices:
+    debug:
+      short: Debug
+      long: Emit debug information
+      buildType: Debug
+      settings: 
+        FCAP_DEBUG: 1
+    MinSizeRel:
+      short: MinSizeRel
+      long: Optimize generated code for binary size
+      buildType: MinSizeRel
+      linkage: static
+
+safe_helpers:
+  default: safe
+  choices:
+    safe:
+      short: Safe functions
+      long: Safe function wrappers for get & set key are compiled in
+      settings:
+        FCAP_SAFE: "HI"
+    unsafe:
+      short: No safe functions
+      long: No safe function wrappers for get or set are compiled in

@@ -2,7 +2,7 @@
 #include <cmath>
 
 extern "C" {
-#include <fcap.h>
+#include <fcap_pkt.h>
 }
 
 TEST(FCAP_TESTS, basic_uint8)
@@ -10,7 +10,9 @@ TEST(FCAP_TESTS, basic_uint8)
 	int ret;
 	uint8_t recv_val;
 	uint8_t sent_val = 13;
-	FPacket pkt = fcap_init_packet();
+	fcap_packet_t packet;
+	FPacket pkt = &packet;
+	fcap_init_packet(pkt);
 
 	ret = fcap_add_key(pkt, KEY_A, FCAP_UINT8, &sent_val, sizeof(sent_val));
 	ASSERT_EQ(ret, 0);
@@ -25,7 +27,9 @@ TEST(FCAP_TESTS, basic_uint16)
 	int ret;
 	uint16_t recv_val;
 	uint16_t sent_val = 13;
-	FPacket pkt = fcap_init_packet();
+	fcap_packet_t packet;
+	FPacket pkt = &packet;
+	fcap_init_packet(pkt);
 
 	ret = fcap_add_key(pkt, KEY_A, FCAP_UINT16, &sent_val,
 			   sizeof(sent_val));
@@ -41,7 +45,9 @@ TEST(FCAP_TESTS, basic_int16_positive)
 	int ret;
 	int16_t recv_val;
 	int16_t sent_val = std::pow(2, 15) - 1;
-	FPacket pkt = fcap_init_packet();
+	fcap_packet_t packet;
+	FPacket pkt = &packet;
+	fcap_init_packet(pkt);
 
 	ret = fcap_add_key(pkt, KEY_A, FCAP_INT16, &sent_val, sizeof(sent_val));
 	ASSERT_EQ(ret, 0);
@@ -56,7 +62,9 @@ TEST(FCAP_TESTS, basic_int16_negative)
 	int ret;
 	int16_t recv_val;
 	int16_t sent_val = -13;
-	FPacket pkt = fcap_init_packet();
+	fcap_packet_t packet;
+	FPacket pkt = &packet;
+	fcap_init_packet(pkt);
 
 	ret = fcap_add_key(pkt, KEY_A, FCAP_INT16, &sent_val, sizeof(sent_val));
 	ASSERT_EQ(ret, 0);
@@ -71,7 +79,9 @@ TEST(FCAP_TESTS, basic_int32)
 	int ret;
 	int32_t recv_val;
 	int32_t sent_val = std::pow(2, 31) - 10;
-	FPacket pkt = fcap_init_packet();
+	fcap_packet_t packet;
+	FPacket pkt = &packet;
+	fcap_init_packet(pkt);
 
 	ret = fcap_add_key(pkt, KEY_A, FCAP_INT32, &sent_val, sizeof(sent_val));
 	ASSERT_EQ(ret, 0);
@@ -85,8 +95,10 @@ TEST(FCAP_TESTS, basic_int64)
 {
 	int ret;
 	int64_t recv_val;
-	int64_t sent_val = std::pow(2, 63) - 10;
-	FPacket pkt = fcap_init_packet();
+	int64_t sent_val = std::pow(2, 62) - 10;
+	fcap_packet_t packet;
+	FPacket pkt = &packet;
+	fcap_init_packet(pkt);
 
 	ret = fcap_add_key(pkt, KEY_A, FCAP_INT64, &sent_val, sizeof(sent_val));
 	ASSERT_EQ(ret, 0);
@@ -101,7 +113,9 @@ TEST(FCAP_TESTS, basic_float)
 	int ret;
 	float recv_val;
 	float sent_val = -19.28;
-	FPacket pkt = fcap_init_packet();
+	fcap_packet_t packet;
+	FPacket pkt = &packet;
+	fcap_init_packet(pkt);
 
 	ret = fcap_add_key(pkt, KEY_A, FCAP_FLOAT, &sent_val, sizeof(sent_val));
 	ASSERT_EQ(ret, 0);
@@ -116,7 +130,9 @@ TEST(FCAP_TESTS, basic_double)
 	int ret;
 	double recv_val;
 	double sent_val = -19.28;
-	FPacket pkt = fcap_init_packet();
+	fcap_packet_t packet;
+	FPacket pkt = &packet;
+	fcap_init_packet(pkt);
 
 	ret = fcap_add_key(pkt, KEY_A, FCAP_DOUBLE, &sent_val,
 			   sizeof(sent_val));
@@ -130,7 +146,9 @@ TEST(FCAP_TESTS, basic_double)
 TEST(FCAP_TESTS, two_keys)
 {
 	int ret;
-	FPacket pkt = fcap_init_packet();
+	fcap_packet_t packet;
+	FPacket pkt = &packet;
+	fcap_init_packet(pkt);
 
 	uint8_t recv_val_1;
 	uint8_t recv_val_2;
@@ -161,7 +179,9 @@ TEST(FCAP_TESTS, two_keys)
 TEST(FCAP_TESTS, duplicate_key)
 {
 	int ret;
-	FPacket pkt = fcap_init_packet();
+	fcap_packet_t packet;
+	FPacket pkt = &packet;
+	fcap_init_packet(pkt);
 
 	uint8_t recv_val_1;
 	uint8_t sent_val_1 = 13;
@@ -186,7 +206,9 @@ TEST(FCAP_TESTS, duplicate_key)
 TEST(FCAP_TESTS, multiple_different_keys)
 {
 	int ret;
-	FPacket pkt = fcap_init_packet();
+	fcap_packet_t packet;
+	FPacket pkt = &packet;
+	fcap_init_packet(pkt);
 
 	double recv_val_1;
 	int32_t recv_val_2;
@@ -218,7 +240,9 @@ TEST(FCAP_TESTS, basic_binary)
 {
 	int i;
     int ret;
-	FPacket pkt = fcap_init_packet();
+	fcap_packet_t packet;
+	FPacket pkt = &packet;
+	fcap_init_packet(pkt);
 
 	uint8_t sent_bytes[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
     uint8_t recv_bytes[20];
@@ -242,7 +266,9 @@ TEST(FCAP_TESTS, safe_uint8)
 	int ret;
 	uint8_t recv_val;
 	uint8_t sent_val = 10;
-	FPacket pkt = fcap_init_packet();
+	fcap_packet_t packet;
+	FPacket pkt = &packet;
+	fcap_init_packet(pkt);
 
 	ret = fcap_add_key_u8(pkt, KEY_A, sent_val);
 	ASSERT_EQ(ret, 0);
@@ -258,7 +284,9 @@ TEST(FCAP_TESTS, safe_uint16)
 	int ret;
 	uint16_t recv_val;
 	uint16_t sent_val = 10;
-	FPacket pkt = fcap_init_packet();
+	fcap_packet_t packet;
+	FPacket pkt = &packet;
+	fcap_init_packet(pkt);
 
 	ret = fcap_add_key_u16(pkt, KEY_A, sent_val);
 	ASSERT_EQ(ret, 0);
@@ -274,7 +302,9 @@ TEST(FCAP_TESTS, safe_int16)
 	int ret;
 	int16_t recv_val;
 	int16_t sent_val = -10;
-	FPacket pkt = fcap_init_packet();
+	fcap_packet_t packet;
+	FPacket pkt = &packet;
+	fcap_init_packet(pkt);
 
 	ret = fcap_add_key_i16(pkt, KEY_A, sent_val);
 	ASSERT_EQ(ret, 0);
@@ -290,7 +320,9 @@ TEST(FCAP_TESTS, safe_int32)
 	int ret;
 	int32_t recv_val;
 	int32_t sent_val = -10;
-	FPacket pkt = fcap_init_packet();
+	fcap_packet_t packet;
+	FPacket pkt = &packet;
+	fcap_init_packet(pkt);
 
 	ret = fcap_add_key_i32(pkt, KEY_A, sent_val);
 	ASSERT_EQ(ret, 0);
@@ -306,7 +338,9 @@ TEST(FCAP_TESTS, safe_int64)
 	int ret;
 	int64_t recv_val;
 	int64_t sent_val = -10;
-	FPacket pkt = fcap_init_packet();
+	fcap_packet_t packet;
+	FPacket pkt = &packet;
+	fcap_init_packet(pkt);
 
 	ret = fcap_add_key_i64(pkt, KEY_A, sent_val);
 	ASSERT_EQ(ret, 0);
@@ -322,7 +356,9 @@ TEST(FCAP_TESTS, safe_float)
 	int ret;
 	float recv_val;
 	float sent_val = 0.1234567;
-	FPacket pkt = fcap_init_packet();
+	fcap_packet_t packet;
+	FPacket pkt = &packet;
+	fcap_init_packet(pkt);
 
 	ret = fcap_add_key_f32(pkt, KEY_A, sent_val);
 	ASSERT_EQ(ret, 0);
@@ -338,7 +374,9 @@ TEST(FCAP_TESTS, safe_double)
 	int ret;
 	double recv_val;
 	double sent_val = -0.12345671234567;
-	FPacket pkt = fcap_init_packet();
+	fcap_packet_t packet;
+	FPacket pkt = &packet;
+	fcap_init_packet(pkt);
 
 	ret = fcap_add_key_d64(pkt, KEY_A, sent_val);
 	ASSERT_EQ(ret, 0);

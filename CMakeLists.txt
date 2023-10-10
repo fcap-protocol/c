@@ -5,18 +5,32 @@ project(fcap-c)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# if ($<CONFIG:MinSizeRel>)
+    add_compile_options(-Os -ffunction-sections -fdata-sections)
+    add_link_options(-ffunction-sections -fdata-sections)
+# endif()
+
 # Make the FCAP Library
 include_directories(include)
 
-add_library(fcap src/fcap.c)
+add_library(fcap src/fcap.c src/fcap_pkt.c)
 
 # Make the tests
 enable_testing()
 find_package(GTest CONFIG REQUIRED)
 
+# Make user sample
 add_executable(fcap_sample tests/sample.c)
 target_link_libraries(fcap_sample fcap)
 
-add_executable(fcap_tests tests/tests.cpp)
+# Make sample server
+add_executable(fcap_server tests/server.c)
+target_link_libraries(fcap_server fcap)
+
+# Make sample client
+add_executable(fcap_client tests/client.c)
+target_link_libraries(fcap_client fcap)
+
+add_executable(fcap_tests tests/protocol_tests.cpp)
 target_link_libraries(fcap_tests fcap GTest::gtest GTest::gtest_main GTest::gmock GTest::gmock_main)
 add_test(FcapTest fcap_tests)

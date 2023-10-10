@@ -1,113 +1,16 @@
-#ifndef FCAP_H_
-#define FCAP_H_
+/**
+ * @brief A function implemented by the user of this library to send bytes
+ * across a transport
+ * @param bytes the bytes to send
+ * @param length the number of bytes to send
+ * @returns number of bytes sent or any non-zero -FCAP_ERROR on failure
+*/
+extern int fcap_send_bytes(uint8_t *bytes, size_t length);
 
-#include <stddef.h>
-#include <stdint.h>
-
-#define FCAP_DEBUG
-#define FCAP_SAFE
-
-#define MTU 512
-
-typedef struct fcap_packet *FPacket;
-
-typedef enum fcap_error {
-	FCAP_ENONE = 0,
-	FCAP_ENOMEM,
-	FCAP_EEXIST,
-	FCAP_EINVAL,
-	FCAP_ENOKEY,
-	FCAP_ETYPE,
-} FERROR;
-
-typedef enum fcap_type {
-	FCAP_BINARY = 0,
-	FCAP_UINT8,
-	FCAP_UINT16,
-	FCAP_INT16,
-	FCAP_INT32,
-	FCAP_INT64,
-	FCAP_FLOAT,
-	FCAP_DOUBLE,
-} FType;
-
-typedef enum fcap_pkt_type {
-	FCAP_REQUEST = 0,
-	FCAP_RESPONSE,
-} FPktType;
-
-typedef enum fcap_key {
-	KEY_A = 0,
-	KEY_B,
-	KEY_C,
-	KEY_D,
-	KEY_E,
-	KEY_F,
-	KEY_G,
-	KEY_H,
-	KEY_I,
-	KEY_J,
-	KEY_K,
-	KEY_L,
-	KEY_M,
-	KEY_N,
-	KEY_O,
-	KEY_P,
-	KEY_Q,
-	KEY_R,
-	KEY_S,
-	KEY_T,
-	KEY_U,
-	KEY_V,
-	KEY_W,
-	KEY_X,
-	KEY_Y,
-	KEY_Z,
-	KEY_AA,
-	KEY_AB,
-	KEY_AC,
-	KEY_AD,
-	KEY_AE,
-	KEY_AF,
-	NUM_KEYS,
-} FKey;
-
-/* functions implemented by user */
-extern FERROR fcap_send_bytes(uint8_t *bytes, size_t length);
-
-/* Creating & Sending Packets */
-FPacket fcap_init_packet();
-
-int fcap_add_key(FPacket pkt, FKey key, FType type, void *value,
-		 size_t size);
-int fcap_get_key(FPacket pkt, FKey key, void *data, size_t size);
-
-
-#ifdef FCAP_SAFE
-
-int fcap_add_key_bin(FPacket pkt, FKey key, uint8_t *data, size_t len);
-int fcap_add_key_u8(FPacket pkt, FKey key, uint8_t value);
-int fcap_add_key_u16(FPacket pkt, FKey key, uint16_t value);
-int fcap_add_key_i16(FPacket pkt, FKey key, int16_t value);
-int fcap_add_key_i32(FPacket pkt, FKey key, int32_t value);
-int fcap_add_key_i64(FPacket pkt, FKey key, int64_t value);
-int fcap_add_key_f32(FPacket pkt, FKey key, float value);
-int fcap_add_key_d64(FPacket pkt, FKey key, double value);
-
-int fcap_get_key_bin(FPacket pkt, FKey key, uint8_t *data, size_t len);
-int fcap_get_key_u8(FPacket pkt, FKey key, uint8_t *value);
-int fcap_get_key_u16(FPacket pkt, FKey key, uint16_t *value);
-int fcap_get_key_i16(FPacket pkt, FKey key, int16_t *value);
-int fcap_get_key_i32(FPacket pkt, FKey key, int32_t *value);
-int fcap_get_key_i64(FPacket pkt, FKey key, int64_t *value);
-int fcap_get_key_f32(FPacket pkt, FKey key, float *value);
-int fcap_get_key_d64(FPacket pkt, FKey key, double *value);
-
-#endif /* FCAP_SAFE */
-
-#ifdef FCAP_DEBUG
-void fcap_debug_ktv(uint8_t *bytes, size_t max_size);
-void fcap_debug_packet(FPacket pkt);
-#endif /* FCAP_DEBUG */
-
-#endif /* FCAP_H_ */
+/**
+ * @brief call this function when you receive bytes from the transport
+ * @param bytes a pointer to the received bytes
+ * @param length number of received bytes
+ * @returns number of consumed bytes or -FCAP_ERROR on error
+*/
+int fcap_recv_bytes(uint8_t *bytes, size_t length);

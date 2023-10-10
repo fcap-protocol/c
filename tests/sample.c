@@ -1,4 +1,4 @@
-#include <fcap.h>
+#include <fcap_pkt.h>
 #include <stdint.h>
 #include <stdio.h>
 
@@ -15,7 +15,8 @@ void print_bytes(void *bytes, size_t len)
 int main()
 {
 	int ret;
-	FPacket pkt = fcap_init_packet();
+	fcap_packet_t pkt;
+	fcap_init_packet(&pkt);
 
 	uint8_t value1 = 13;
 	ret = fcap_add_key(pkt, KEY_C, FCAP_UINT8, &value1, sizeof(value1));
