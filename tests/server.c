@@ -1,72 +1,67 @@
-// Server side implementation of UDP client-server model
-// Based on code from https://www.scaler.com/topics/udp-server-client-implementation-in-c/
+#include <fcap.h>
+#include <fcap_udp.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
 
-#include <fcap_pkt.h>
-	
-#define PORT	 8080
-#define MAXLINE 1024
+#define THIS_PORT 12345
+#define PEER_PORT 12346
+#define PEER_IP "127.0.0.1"
 
-/**
- * @brief fcap function for sending bytes over this channel
-*/
-int fcap_send_bytes(uint8_t *bytes, size_t length) {
+fcap_udp_t udp;
 
+void fcap_user_recv(FApp app, FChannel channel)
+{
+
+	float val;
+	fcap_app_get_key_f32(app, KEY_A, &val);
+
+	printf("Server Got packet with value: %lf\n", val);
+
+	fcap_send_all(app);
 }
 
-void create_packet() {
-    FPacket pkt = fcap_init_packet();
-    fcap_add_key_f32(pkt, KEY_AA, 12.34);
-}
-	
-int main() {
-	int sockfd;
-	char buffer[MAXLINE];
-	char *hello = "Hello from server";
-	struct sockaddr_in servaddr, cliaddr;
-		
-	// Creating socket file descriptor
-	if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) {
-		perror("socket creation failed");
-		exit(EXIT_FAILURE);
+int main()
+{
+	int ret;
+	FApp app;
+	FChannel channel;
+
+	/* Setup a channel */
+	ret = fcap_udp_setup_channel(&udp, THIS_PORT, PEER_IP, PEER_PORT);
+	if (ret < 0) {
+		printf("Error: Failed to set up udp channel with code %d!\n", ret);
+		exit(1);
 	}
-		
-	memset(&servaddr, 0, sizeof(servaddr));
-	memset(&cliaddr, 0, sizeof(cliaddr));
-		
-	// Filling server information
-	servaddr.sin_family = AF_INET; // IPv4
-	servaddr.sin_addr.s_addr = INADDR_ANY;
-	servaddr.sin_port = htons(PORT);
-		
-	// Bind the socket with the server address
-	if ( bind(sockfd, (const struct sockaddr *)&servaddr,
-			sizeof(servaddr)) < 0 )
-	{
-		perror("bind failed");
-		exit(EXIT_FAILURE);
+
+	/* Get the first instance */
+	app = fcap_get_instance(0);
+	if (!app) {
+		printf("Error: Failed to get fcap instance!\n");
+		exit(1);
 	}
-		
-	int len, n;
-	
-	len = sizeof(cliaddr); //len is value/result
-	
-	n = recvfrom(sockfd, (char *)buffer, MAXLINE,
-				MSG_WAITALL, ( struct sockaddr *) &cliaddr,
-				&len);
-	buffer[n] = '\0';
-	printf("Client : %s\n", buffer);
-	sendto(sockfd, (const char *)hello, strlen(hello),
-		MSG_CONFIRM, (const struct sockaddr *) &cliaddr,
-			len);
-	printf("Hello message sent.\n");
-		
-	return 0;
+
+	/* Add the channel */
+	channel = fcap_add_channel(app,
+				   &udp,
+				   fcap_udp_send_bytes,
+				   fcap_udp_poll,
+				   fcap_udp_get_bytes);
+	if (!channel) {
+		printf("Error: Failed to add fcap channel!\n");
+		exit(1);
+	}
+
+	/* Poll everything! */
+	printf("Running!\n");
+	while (1) {
+		ret = fcap_poll_all(app);
+		if (ret < 0) {
+			printf("Error: Failed to poll channels!");
+			break;
+		}
+	}
+
+	// fcap_udp_cleanup(&channel1);
+	printf("Done\n");
 }

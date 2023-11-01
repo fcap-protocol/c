@@ -1,5 +1,5 @@
-#ifndef FCAP_H_
-#define FCAP_H_
+#ifndef FCAP_PKT_H
+#define FCAP_PKT_H
 
 #include <stddef.h>
 #include <stdint.h>
@@ -16,7 +16,7 @@ typedef enum fcap_error {
 	FCAP_EINVAL,
 	FCAP_ENOKEY,
 	FCAP_ETYPE,
-} FERROR;
+} FError;
 
 typedef enum fcap_type {
 	FCAP_BINARY = 0,
@@ -116,6 +116,7 @@ typedef struct fcap_packet *FPacket;
 
 /* Creating & Sending Packets */
 void fcap_init_packet(FPacket pkt);
+int fcap_get_num_bytes(FPacket pkt);
 
 int fcap_add_key(FPacket pkt, FKey key, FType type, void *value,
 		 size_t size);
@@ -145,4 +146,4 @@ void fcap_debug_ktv(uint8_t *bytes, size_t max_size);
 void fcap_debug_packet(FPacket pkt);
 #endif /* FCAP_DEBUG */
 
-#endif /* FCAP_H_ */
+#endif /* FCAP_PKT_H */

@@ -59,6 +59,20 @@ void fcap_init_packet(FPacket pkt)
 	memset(pkt->ktv_bytes, 0, sizeof(ktv_bytes_t));
 }
 
+int fcap_get_num_bytes(FPacket pkt)
+{
+	int key_i;
+	size_t size = 0;
+
+	for (key_i = 0; key_i < pkt->header.num_keys; key_i++)
+		size += fcap_get_ktv_size(
+			(struct fcap_ktv *)&pkt->ktv_bytes[size]);
+
+	size += sizeof(struct fcap_header);
+
+	return size;
+}
+
 /**
  * @brief Consumes raw bytes for consumption as an FCAP packet
  * @param dest the packet to store the incoming bytes into
@@ -93,11 +107,7 @@ int fcap_encode_packet(FPacket src, uint8_t *dest, size_t dest_len)
 	int key_i;
 	size_t size = 0;
 
-	for (key_i = 0; key_i < src->header.num_keys; key_i++)
-		size += fcap_get_ktv_size(
-			(struct fcap_ktv *)&src->ktv_bytes[size]);
-
-	size += FCAP_HEADER_SIZE;
+	size = fcap_get_num_bytes(src);
 
 	if (dest_len < size)
 		return -FCAP_ENOMEM;

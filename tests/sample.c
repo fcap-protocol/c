@@ -1,6 +1,8 @@
-#include <fcap_pkt.h>
+#include <fcap.h>
+#include <fcap_udp.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 void print_bytes(void *bytes, size_t len)
 {
@@ -8,50 +10,47 @@ void print_bytes(void *bytes, size_t len)
 
 	printf("Bytes:\n");
 	for (int i = 0; i < len; i++) {
-		printf("[%d]: 0x%02x\n", i, bytes_arr[i]);
+		printf("[%d]: 0x%02x '%c'\n", i, bytes_arr[i], bytes_arr[i]);
 	}
 }
+
+#define SIZE 64
+
+fcap_udp_t channel1;
 
 int main()
 {
 	int ret;
-	fcap_packet_t pkt;
-	fcap_init_packet(&pkt);
-
-	uint8_t value1 = 13;
-	ret = fcap_add_key(pkt, KEY_C, FCAP_UINT8, &value1, sizeof(value1));
+	ret = fcap_udp_setup_channel(&channel1, 12345, "127.0.0.1", 8080);
 	if (ret < 0) {
-		printf("Add key 1 returned %d\n", ret);
-		return -1;
+		printf("Error setting up udp channel: %d\n", ret);
+		exit(1);
 	}
 
-	uint8_t value2 = 42;
-	ret = fcap_add_key(pkt, KEY_B, FCAP_UINT8, &value2, sizeof(value2));
-	if (ret < 0) {
-		printf("Add key 2 returned %d\n", ret);
-		return -1;
+	uint8_t bytes[SIZE];
+
+
+	printf("Running!\n");
+	while (1) {
+		if (fcap_udp_poll(&channel1) > 0) {
+			
+			printf("Got bytes!\n");
+
+			ret = fcap_udp_get_bytes(&channel1, bytes, SIZE);
+
+			if (ret > 0) {
+				print_bytes(bytes, SIZE);
+			} 
+
+			ret = fcap_udp_send_bytes(&channel1, bytes, SIZE);
+			if (ret < 0) {
+				printf("error sending!\n");
+			} else {
+				printf("Sent %d bytes!\n", ret);
+			}
+			break;
+		}
 	}
-
-	print_bytes(pkt, 10);
-	fcap_debug_packet(pkt);
-
-	uint8_t recv1;
-	ret = fcap_get_key(pkt, KEY_C, &recv1, sizeof(recv1));
-	if (ret < 0) {
-		printf("Get key 1 returned %d\n", ret);
-		return -1;
-	}
-
-	printf("Sent1: %d\n", value1);
-	printf("Recv1: %d\n", recv1);
-
-	uint8_t recv2;
-	ret = fcap_get_key(pkt, KEY_B, &recv2, sizeof(recv2));
-	if (ret < 0) {
-		printf("Get key 2 returned %d\n", ret);
-		return -1;
-	}
-
-	printf("Sent2: %d\n", value2);
-	printf("Recv2: %d\n", recv2);
+	fcap_udp_cleanup(&channel1);
+	printf("Done\n");
 }

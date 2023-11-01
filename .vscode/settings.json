@@ -60,14 +60,21 @@
         "thread": "cpp",
         "cinttypes": "cpp",
         "typeinfo": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "ip.h": "c",
+        "socket.h": "c",
+        "inet.h": "c",
+        "stdio.h": "c"
     },
     "cmake.configureArgs": [
         "-DCMAKE_TOOLCHAIN_FILE=${env:VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
     ],
     "cSpell.words": [
+        "cliaddr",
         "FCAP",
         "KTVS",
+        "rfds",
+        "servaddr",
         "vcpkg"
     ],
     "editor.rulers": [

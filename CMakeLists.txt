@@ -15,21 +15,23 @@ include_directories(include)
 
 add_library(fcap src/fcap.c src/fcap_pkt.c)
 
+add_library(fcap_udp src/fcap_udp.c)
+
 # Make the tests
 enable_testing()
 find_package(GTest CONFIG REQUIRED)
 
 # Make user sample
 add_executable(fcap_sample tests/sample.c)
-target_link_libraries(fcap_sample fcap)
+target_link_libraries(fcap_sample fcap fcap_udp)
 
 # Make sample server
 add_executable(fcap_server tests/server.c)
-target_link_libraries(fcap_server fcap)
+target_link_libraries(fcap_server fcap fcap_udp)
 
 # Make sample client
 add_executable(fcap_client tests/client.c)
-target_link_libraries(fcap_client fcap)
+target_link_libraries(fcap_client fcap fcap_udp)
 
 add_executable(fcap_tests tests/protocol_tests.cpp)
 target_link_libraries(fcap_tests fcap GTest::gtest GTest::gtest_main GTest::gmock GTest::gmock_main)
