@@ -125,6 +125,19 @@ TEST(FCAP_TESTS, basic_float)
 	ASSERT_EQ(recv_val, sent_val);
 }
 
+TEST(FCAP_TESTS, missing_key)
+{
+	int ret;
+	float recv_val;
+	fcap_packet_t packet;
+	FPacket pkt = &packet;
+	fcap_init_packet(pkt);
+
+	ret = fcap_get_key(pkt, KEY_A, &recv_val, sizeof(recv_val));
+	ASSERT_TRUE(ret < 0);
+}
+
+
 TEST(FCAP_TESTS, basic_double)
 {
 	int ret;

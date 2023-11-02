@@ -121,6 +121,7 @@ int fcap_get_num_bytes(FPacket pkt);
 int fcap_add_key(FPacket pkt, FKey key, FType type, void *value,
 		 size_t size);
 int fcap_get_key(FPacket pkt, FKey key, void *data, size_t size);
+int fcap_has_key(FPacket pkt, FKey key);
 
 #ifdef FCAP_SAFE
 int fcap_add_key_bin(FPacket pkt, FKey key, uint8_t *data, size_t len);

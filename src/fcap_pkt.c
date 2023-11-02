@@ -232,6 +232,32 @@ int fcap_get_key(FPacket pkt, FKey key, void *data, size_t size)
 	return view->type;
 }
 
+int fcap_has_key(FPacket pkt, FKey key)
+{
+	int key_i;
+	size_t idx;
+	bool found;
+	struct fcap_ktv *view;
+
+	view = (struct fcap_ktv *)pkt->ktv_bytes;
+
+	/* Find the end of the packets or if key exists */
+	idx = 0;
+	found = false;
+	for (key_i = 0; key_i < pkt->header.num_keys; key_i++) {
+		if (view->key == key) {
+			found = true;
+			break;
+		}
+
+		idx += fcap_get_ktv_size(view);
+		view = (struct fcap_ktv *)&pkt->ktv_bytes[idx];
+	}
+
+	return found;
+}
+
+
 #ifdef FCAP_SAFE
 /*
  * Statically typed convenience functions, primarily for enforcing compiler safe

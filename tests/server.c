@@ -12,11 +12,17 @@ fcap_udp_t udp;
 
 void fcap_user_recv(FApp app, FChannel channel)
 {
+	float val1;
+	fcap_app_get_key_f32(app, KEY_A, &val1);
+	printf("Server Got packet with A value: %lf\n", val1);
 
-	float val;
-	fcap_app_get_key_f32(app, KEY_A, &val);
-
-	printf("Server Got packet with value: %lf\n", val);
+	int64_t val2 = 0;
+	int ret = fcap_app_get_key_i64(app, KEY_AA, &val2);
+	if (ret < 0) {
+		printf("Key AA did not have a value :( %d\n", ret);
+	} else {
+		printf("Server Got packet with AA value: %d\n", val2);
+	}
 
 	fcap_send_all(app);
 }
@@ -30,12 +36,13 @@ int main()
 	/* Setup a channel */
 	ret = fcap_udp_setup_channel(&udp, THIS_PORT, PEER_IP, PEER_PORT);
 	if (ret < 0) {
-		printf("Error: Failed to set up udp channel with code %d!\n", ret);
+		printf("Error: Failed to set up udp channel with code %d!\n",
+		       ret);
 		exit(1);
 	}
 
 	/* Get the first instance */
-	app = fcap_get_instance(0);
+	app = fcap_init_instance(0);
 	if (!app) {
 		printf("Error: Failed to get fcap instance!\n");
 		exit(1);

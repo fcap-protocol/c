@@ -10,12 +10,22 @@
 
 fcap_udp_t udp;
 
+int my_on_send(void *priv, FPacket pkt)
+{
+	int ret;
+	if (!fcap_has_key(pkt, KEY_AA)) {
+		ret = fcap_add_key_i64(pkt, KEY_AA, 58);
+		if (ret < 0) {
+			printf("Error: could not add i64 %d\n", ret);
+		}
+	}
+}
+
 void fcap_user_recv(FApp app, FChannel channel)
 {
 	float val;
 	fcap_app_get_key_f32(app, KEY_A, &val);
 
-	printf("Client Got packet with value: %lf\n", val);
 	exit(1);
 }
 
@@ -33,7 +43,7 @@ int main()
 	}
 
 	/* Get the first instance */
-	app = fcap_get_instance(0);
+	app = fcap_init_instance(0);
 	if (!app) {
 		printf("Error: Failed to get fcap instance!\n");
 		exit(1);
@@ -50,6 +60,12 @@ int main()
 		exit(1);
 	}
 
+	/* Add the middleware */
+	ret = fcap_add_middleware(app, NULL, my_on_send, NULL);
+	if (ret < 0) {
+		printf("Error: Failed to add middleware!\n");
+		exit(1);
+	}
 
 	fcap_app_add_key_f32(app, KEY_A, 12.34);
 	fcap_send_all(app);

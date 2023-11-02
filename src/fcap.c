@@ -19,6 +19,21 @@ typedef struct fcap_channel {
 } fcap_channel_t;
 
 /**
+ * @brief all info needed to manage and use a middleware layer
+ * @param priv private data to the middleware
+ * @param on_send the function which is called with the packet before 
+ * transmitting on a channel. returns 0 on success or -errno on failure
+ * @param on_recv the function which is called after bytes have been received
+ * but before the user is alerted to it
+ * @note these functions will modify the packets in place
+*/
+typedef struct fcap_middleware {
+	void *priv;
+	int (*on_send)(void *priv, FPacket pkt);
+	int (*on_recv)(void *priv, FPacket pkt);
+} fcap_middleware_t;
+
+/**
  * @brief an fcap instance
  * @param num_channels the number of setup channels
  * @param channels the array of channel fn pointers
@@ -26,18 +41,26 @@ typedef struct fcap_channel {
 */
 typedef struct fcap {
 	uint8_t num_channels; /* NOTE: max 255 channels possible */
+	uint8_t num_middleware; /* NOTE: max 255 middleware possible */
 	fcap_channel_t channels[NUM_CHANNELS];
+	fcap_middleware_t middlewares[NUM_MIDDLEWARE];
 	fcap_packet_t pkt;
 } fcap_app_t;
 
 /* Statically allocated fcap instances*/
 fcap_app_t fcap_apps[NUM_INSTANCES];
 
-FApp fcap_get_instance(int id)
+FApp fcap_init_instance(int id)
 {
 	if (id > (NUM_INSTANCES - 1)) {
 		return NULL;
 	}
+
+	fcap_apps[id].num_channels = 0;
+	fcap_apps[id].num_middleware = 0;
+
+	fcap_init_packet(&fcap_apps[id].pkt);
+
 	return &fcap_apps[id];
 }
 
@@ -62,12 +85,69 @@ fcap_add_channel(FApp app,
 	return &app->channels[app->num_channels - 1];
 }
 
+int fcap_add_middleware(FApp app,
+			void *priv,
+			int (*on_send)(void *priv, FPacket pkt),
+			int (*on_recv)(void *priv, FPacket pkt))
+{
+	if (app->num_middleware == NUM_MIDDLEWARE)
+		return -FCAP_ENOMEM;
+
+	app->middlewares[app->num_middleware].priv = priv;
+	app->middlewares[app->num_middleware].on_send = on_send;
+	app->middlewares[app->num_middleware].on_recv = on_recv;
+
+	app->num_middleware++;
+
+	return 0;
+}
+
 /*    Sending Functions    */
+
+static int fcap_do_send_middleware(FApp app)
+{
+	int i;
+	int ret;
+
+	for (i = 0; i < app->num_middleware; i++) {
+		if (!app->middlewares[i].on_send)
+			continue;
+
+		ret = app->middlewares[i].on_send(app->middlewares[i].priv,
+						  &app->pkt);
+
+		if (ret < 0)
+			break;
+	}
+
+	return ret;
+}
+
+static int fcap_do_recv_middleware(FApp app)
+{
+	int i;
+	int ret;
+
+	for (i = 0; i < app->num_middleware; i++) {
+		if (!app->middlewares[i].on_recv)
+			continue;
+
+		ret = app->middlewares[i].on_recv(app->middlewares[i].priv,
+						  &app->pkt);
+
+		if (ret < 0)
+			break;
+	}
+}
 
 FError fcap_send_all(FApp app)
 {
 	int i;
 	int ret = 0;
+
+	ret = fcap_do_send_middleware(app);
+	if (ret < 0)
+		return ret;
 
 	for (i = 0; i < app->num_channels; i++) {
 		/* Skip channels which can't send */
@@ -88,8 +168,15 @@ FError fcap_send_all(FApp app)
 
 FError fcap_send(FApp app, FChannel channel)
 {
+	int i;
+	int ret;
+
 	if (channel == NULL)
 		return -FCAP_EINVAL;
+
+	ret = fcap_do_send_middleware(app);
+	if (ret < 0)
+		return ret;
 
 	return channel->send_bytes(channel->priv,
 				   (uint8_t *)&app->pkt,
@@ -117,6 +204,10 @@ FError fcap_poll_all(FApp app)
 			if (ret < 0)
 				return ret;
 
+			ret = fcap_do_recv_middleware(app);
+			if (ret < 0)
+				return ret;
+
 			fcap_user_recv(app, &app->channels[i]);
 		}
 	}
@@ -124,12 +215,82 @@ FError fcap_poll_all(FApp app)
 	return ret;
 }
 
-int fcap_app_add_key_f32(FApp app, FKey key, float value)
+inline int fcap_app_add_key_bin(FApp app, FKey key, uint8_t *data, size_t len)
 {
-	fcap_add_key_f32(&app->pkt, key, value);
+	return fcap_add_key(&app->pkt, key, FCAP_BINARY, data, len);
 }
 
-int fcap_app_get_key_f32(FApp app, FKey key, float *value)
+inline int fcap_app_add_key_u8(FApp app, FKey key, uint8_t value)
 {
-	fcap_get_key_f32(&app->pkt, key, value);
+	return fcap_add_key(&app->pkt, key, FCAP_UINT8, &value, sizeof(value));
+}
+
+inline int fcap_app_add_key_u16(FApp app, FKey key, uint16_t value)
+{
+	return fcap_add_key(&app->pkt, key, FCAP_UINT16, &value, sizeof(value));
+}
+
+inline int fcap_app_add_key_i16(FApp app, FKey key, int16_t value)
+{
+	return fcap_add_key(&app->pkt, key, FCAP_INT16, &value, sizeof(value));
+}
+
+inline int fcap_app_add_key_i32(FApp app, FKey key, int32_t value)
+{
+	return fcap_add_key(&app->pkt, key, FCAP_INT32, &value, sizeof(value));
+}
+
+inline int fcap_app_add_key_i64(FApp app, FKey key, int64_t value)
+{
+	return fcap_add_key(&app->pkt, key, FCAP_INT64, &value, sizeof(value));
+}
+
+inline int fcap_app_add_key_f32(FApp app, FKey key, float value)
+{
+	return fcap_add_key(&app->pkt, key, FCAP_FLOAT, &value, sizeof(value));
+}
+
+inline int fcap_app_add_key_d64(FApp app, FKey key, double value)
+{
+	return fcap_add_key(&app->pkt, key, FCAP_DOUBLE, &value, sizeof(value));
+}
+
+inline int fcap_app_get_key_bin(FApp app, FKey key, uint8_t *data, size_t len)
+{
+	return fcap_get_key_bin(&app->pkt, key, data, len);
+}
+
+inline int fcap_app_get_key_u8(FApp app, FKey key, uint8_t *value)
+{
+	return fcap_get_key_u8(&app->pkt, key, value);
+}
+
+inline int fcap_app_get_key_u16(FApp app, FKey key, uint16_t *value)
+{
+	return fcap_get_key_u16(&app->pkt, key, value);
+}
+
+inline int fcap_app_get_key_i16(FApp app, FKey key, int16_t *value)
+{
+	return fcap_get_key_i16(&app->pkt, key, value);
+}
+
+inline int fcap_app_get_key_i32(FApp app, FKey key, int32_t *value)
+{
+	return fcap_get_key_i32(&app->pkt, key, value);
+}
+
+inline int fcap_app_get_key_i64(FApp app, FKey key, int64_t *value)
+{
+	return fcap_get_key_i64(&app->pkt, key, value);
+}
+
+inline int fcap_app_get_key_f32(FApp app, FKey key, float *value)
+{
+	return fcap_get_key_f32(&app->pkt, key, value);
+}
+
+inline int fcap_app_get_key_d64(FApp app, FKey key, double *value)
+{
+	return fcap_get_key_d64(&app->pkt, key, value);
 }
