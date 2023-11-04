@@ -21,6 +21,17 @@ static_assert(sizeof(struct fcap_header) == FCAP_HEADER_SIZE,
 static_assert(sizeof(struct fcap_packet) == MTU,
 	      "FCAP Packet doesn't match expected MTU");
 
+static size_t fcap_type_sizes[] = {
+	[FCAP_BINARY] = 0,
+	[FCAP_UINT8] = sizeof(uint8_t),
+	[FCAP_UINT16] = sizeof(uint16_t),
+	[FCAP_INT16] = sizeof(int16_t),
+	[FCAP_INT32] = sizeof(int32_t),
+	[FCAP_INT64] = sizeof(int64_t),
+	[FCAP_FLOAT] = sizeof(float),
+	[FCAP_DOUBLE] = sizeof(double),
+};
+
 /**
  * @brief gets the size of a ktv, excluding header byte
  * @param view a pointer to the first byte of the ktv
@@ -104,7 +115,6 @@ int fcap_decode_packet(FPacket dest, uint8_t *src, int src_len)
 */
 int fcap_encode_packet(FPacket src, uint8_t *dest, size_t dest_len)
 {
-	int key_i;
 	size_t size = 0;
 
 	size = fcap_get_num_bytes(src);
@@ -133,7 +143,6 @@ int fcap_add_key(FPacket pkt, FKey key, FType type, void *value, size_t size)
 {
 	int key_i;
 	size_t idx;
-	bool found;
 	size_t value_size;
 	struct fcap_ktv *view;
 
@@ -144,7 +153,6 @@ int fcap_add_key(FPacket pkt, FKey key, FType type, void *value, size_t size)
 
 	/* Find the end of the packets or if key exists */
 	idx = 0;
-	found = false;
 	for (key_i = 0; key_i < pkt->header.num_keys; key_i++) {
 		/* Check if the key already exists */
 		if (view->key == key)
@@ -256,7 +264,6 @@ int fcap_has_key(FPacket pkt, FKey key)
 
 	return found;
 }
-
 
 #ifdef FCAP_SAFE
 /*

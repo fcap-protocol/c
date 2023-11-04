@@ -3,27 +3,8 @@
 
 #include <fcap_pkt.h>
 
-#define NUM_INSTANCES 1
-#define NUM_CHANNELS 5
-#define NUM_MIDDLEWARE 5
-
-typedef struct fcap *FApp;
-typedef struct fcap_channel *FChannel;
-
 /**
- * @brief initialised and gets a reference to a statically created fcap instances
- * This will reset the instance if called more than once
- * @param id the id of statically created fcap instance. This has a 
- * range of [0, NUM_INSTANCES)
- * @returns a reference to the instance or NULL if the instance doesn't exist
- * @note Users can adjust the number of instances which are statically created by 
- * changing the value of NUM_INSTANCES, only 1 is created by default.
-*/
-FApp fcap_init_instance(int id);
-
-/**
- * @brief setup a channel to send packets on
- * @param app the fcap application instance to add the channel to
+ * @brief all info needed to manage and use a transport channel
  * @param priv any private context data the channel needs to maintain
  * @param send_bytes a function to call to send bytes out on this channel, 
  * returns 0 on success or -errno on failure
@@ -32,29 +13,74 @@ FApp fcap_init_instance(int id);
  * @param get_bytes a function which will load the bytes array with new bytes from
  * the channel. Returns the number of bytes received or -errno on failure. 
  * This fuction should NEVER block
- * @returns a reference to the fcap channel or NULL on failure.
 */
-FChannel
-fcap_add_channel(FApp app,
-		 void *priv,
-		 int (*send_bytes)(void *priv, uint8_t *bytes, size_t length),
-		 int (*poll)(void *priv),
-		 int (*get_bytes)(void *priv, uint8_t *bytes, size_t length));
+struct fcap_channel {
+	void *priv;
+	int (*send_bytes)(void *priv, uint8_t *bytes, size_t length);
+	int (*poll)(void *priv);
+	int (*get_bytes)(void *priv, uint8_t *bytes, size_t length);
+};
+typedef struct fcap_channel *FChannel;
 
 /**
- * @brief adds middleware patterns in order
- * @param priv private data to the middleware
- * @param on_send the function which is called with the packet before 
- * transmitting on a channel. returns 0 on success or -errno on failure
- * @param on_recv the function which is called after bytes have been received
- * but before the user is alerted to it
- * @returns 0 on success or -errno on failure
+ * @brief all info needed to manage and use a middleware layer
+ * @param priv any private context data the channel needs to maintain
+ * @param send_bytes a function to call to send bytes out on this channel, 
+ * returns 0 on success or -errno on failure
+ * @param poll a function which returns non-zero if there is a packet to read,
+ * zero if no packet or -errno if error checking. This function should NEVER block
+ * @param get_bytes a function which will load the bytes array with new bytes from
+ * the channel. Returns the number of bytes received or -errno on failure. 
+ * This fuction should NEVER block
  * @note these functions will modify the packets in place
 */
-int fcap_add_middleware(FApp app,
-			void *priv,
-			int (*on_send)(void *priv, FPacket pkt),
-			int (*on_recv)(void *priv, FPacket pkt));
+struct fcap_middleware {
+	void *priv;
+	int (*on_send)(void *priv, FPacket pkt);
+	int (*on_recv)(void *priv, FPacket pkt);
+};
+typedef struct fcap_middleware *FMiddleware;
+
+/**
+ * @brief an fcap instance
+ * @param num_channels the number of setup channels
+ * @param num_middleware number of middleware patterns
+ * @param channels an array of channel pointers
+ * @param middlewares an array of middleware pointers
+ * @param pkt the packet buffer
+*/
+struct fcap {
+	const uint8_t num_channels;
+	const uint8_t num_middleware;
+	const FChannel *channels;
+	const FMiddleware *middleware;
+	fcap_packet_t pkt;
+};
+typedef struct fcap *FApp;
+
+#define FCAP_CREATE_APP(name, channels_in, middleware_in)                      \
+	struct fcap name##_internal = { .num_channels = channels_in##_size,    \
+					.num_middleware =                      \
+						middleware_in##_size,          \
+					.channels = channels_in,               \
+					.middleware = middleware_in,           \
+					.pkt = {} };                           \
+	const FApp name = &name##_internal;
+
+#define FCAP_SET_CHANNELS(name, ...)                                           \
+	const FChannel name[] = { __VA_ARGS__ };                               \
+	const int name##_size = sizeof(name) / sizeof(FChannel);
+
+#define FCAP_SET_MIDDLEWARE(name, ...)                                         \
+	const FMiddleware name[] = { __VA_ARGS__ };                            \
+	const int name##_size = sizeof(name) / sizeof(FMiddleware);
+
+/**
+ * @brief initialised a statically created fcap instance
+ * This will reset the instance if called more than once
+ * @param app the application instance to initialise
+*/
+void fcap_init_instance(FApp app);
 
 /**
  * @brief sends the packet out on all channels

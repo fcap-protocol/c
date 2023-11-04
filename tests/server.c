@@ -8,7 +8,12 @@
 #define PEER_PORT 12346
 #define PEER_IP "127.0.0.1"
 
-fcap_udp_t udp;
+FCAP_CREATE_UDP_CHANNEL(my_udp);
+FCAP_SET_CHANNELS(my_channels, &my_udp)
+
+FCAP_SET_MIDDLEWARE(my_middleware)
+
+FCAP_CREATE_APP(app, my_channels, my_middleware)
 
 void fcap_user_recv(FApp app, FChannel channel)
 {
@@ -21,7 +26,7 @@ void fcap_user_recv(FApp app, FChannel channel)
 	if (ret < 0) {
 		printf("Key AA did not have a value :( %d\n", ret);
 	} else {
-		printf("Server Got packet with AA value: %d\n", val2);
+		printf("Server Got packet with AA value: %ld\n", val2);
 	}
 
 	fcap_send_all(app);
@@ -30,11 +35,10 @@ void fcap_user_recv(FApp app, FChannel channel)
 int main()
 {
 	int ret;
-	FApp app;
-	FChannel channel;
 
 	/* Setup a channel */
-	ret = fcap_udp_setup_channel(&udp, THIS_PORT, PEER_IP, PEER_PORT);
+	ret = fcap_udp_setup_channel(
+		&my_udp_priv, THIS_PORT, PEER_IP, PEER_PORT);
 	if (ret < 0) {
 		printf("Error: Failed to set up udp channel with code %d!\n",
 		       ret);
@@ -42,22 +46,7 @@ int main()
 	}
 
 	/* Get the first instance */
-	app = fcap_init_instance(0);
-	if (!app) {
-		printf("Error: Failed to get fcap instance!\n");
-		exit(1);
-	}
-
-	/* Add the channel */
-	channel = fcap_add_channel(app,
-				   &udp,
-				   fcap_udp_send_bytes,
-				   fcap_udp_poll,
-				   fcap_udp_get_bytes);
-	if (!channel) {
-		printf("Error: Failed to add fcap channel!\n");
-		exit(1);
-	}
+	fcap_init_instance(app);
 
 	/* Poll everything! */
 	printf("Running!\n");

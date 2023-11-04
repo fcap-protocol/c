@@ -8,7 +8,12 @@
 #define PEER_PORT 12345
 #define PEER_IP "127.0.0.1"
 
-fcap_udp_t udp;
+FCAP_CREATE_UDP_CHANNEL(my_udp);
+FCAP_SET_CHANNELS(my_channels, &my_udp)
+
+FCAP_SET_MIDDLEWARE(my_middleware)
+
+FCAP_CREATE_APP(app, my_channels, my_middleware)
 
 int my_on_send(void *priv, FPacket pkt)
 {
@@ -19,6 +24,7 @@ int my_on_send(void *priv, FPacket pkt)
 			printf("Error: could not add i64 %d\n", ret);
 		}
 	}
+	return 0;
 }
 
 void fcap_user_recv(FApp app, FChannel channel)
@@ -32,41 +38,18 @@ void fcap_user_recv(FApp app, FChannel channel)
 int main()
 {
 	int ret;
-	FApp app;
-	FChannel channel;
 
 	/* Setup a channel */
-	ret = fcap_udp_setup_channel(&udp, THIS_PORT, PEER_IP, PEER_PORT);
+	ret = fcap_udp_setup_channel(&my_udp_priv, THIS_PORT, PEER_IP, PEER_PORT);
 	if (ret < 0) {
 		printf("Error: Failed to set up udp channel with code %d!\n", ret);
 		exit(1);
 	}
 
 	/* Get the first instance */
-	app = fcap_init_instance(0);
-	if (!app) {
-		printf("Error: Failed to get fcap instance!\n");
-		exit(1);
-	}
+	fcap_init_instance(app);
 
-	/* Add the channel */
-	channel = fcap_add_channel(app,
-				   &udp,
-				   fcap_udp_send_bytes,
-				   fcap_udp_poll,
-				   fcap_udp_get_bytes);
-	if (!channel) {
-		printf("Error: Failed to add fcap channel!\n");
-		exit(1);
-	}
-
-	/* Add the middleware */
-	ret = fcap_add_middleware(app, NULL, my_on_send, NULL);
-	if (ret < 0) {
-		printf("Error: Failed to add middleware!\n");
-		exit(1);
-	}
-
+	// c1
 	fcap_app_add_key_f32(app, KEY_A, 12.34);
 	fcap_send_all(app);
 

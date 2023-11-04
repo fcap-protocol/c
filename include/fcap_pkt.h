@@ -70,17 +70,6 @@ typedef enum fcap_key {
 	NUM_KEYS,
 } FKey;
 
-static size_t fcap_type_sizes[] = {
-	[FCAP_BINARY] = 0,
-	[FCAP_UINT8] = sizeof(uint8_t),
-	[FCAP_UINT16] = sizeof(uint16_t),
-	[FCAP_INT16] = sizeof(int16_t),
-	[FCAP_INT32] = sizeof(int32_t),
-	[FCAP_INT64] = sizeof(int64_t),
-	[FCAP_FLOAT] = sizeof(float),
-	[FCAP_DOUBLE] = sizeof(double),
-};
-
 struct fcap_header {
 	uint8_t num_keys : 5;
 	uint8_t version : 3;

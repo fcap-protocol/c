@@ -9,21 +9,29 @@ typedef struct fcap_udp {
 	struct sockaddr_in dest_addr;
 } fcap_udp_t;
 
-
 /**
  * @brief send bytes function as per fcap.h spec
 */
-int fcap_udp_send_bytes(void *udp, uint8_t *bytes, size_t length);
+int fcap_udp_send_bytes(void *priv, uint8_t *bytes, size_t length);
 
 /**
  * @brief poll function as per fcap.h spec
 */
-int fcap_udp_poll(void *udp);
+int fcap_udp_poll(void *priv);
 
 /**
  * @brief get bytes function as per fcap.h spec
 */
-int fcap_udp_get_bytes(void *udp, uint8_t *bytes, size_t length);
+int fcap_udp_get_bytes(void *priv, uint8_t *bytes, size_t length);
+
+#define FCAP_CREATE_UDP_CHANNEL(name)                                                  \
+	struct fcap_udp name##_priv;                                           \
+	struct fcap_channel name = {                                           \
+		.priv = &name##_priv,                                          \
+		.poll = fcap_udp_poll,                                         \
+		.get_bytes = fcap_udp_get_bytes,                               \
+		.send_bytes = fcap_udp_send_bytes,                             \
+	};
 
 /**
  * @brief Sets up a udp socket which binds to any ip address on the host
@@ -34,16 +42,15 @@ int fcap_udp_get_bytes(void *udp, uint8_t *bytes, size_t length);
  * @param dest_port the port of the peer
  * @returns 0 on success or -errno on failure
 */
-int fcap_udp_setup_channel(void *udp,
-		      int server_port,
-		      char *dest_ip,
-		      int dest_port);
+int fcap_udp_setup_channel(void *priv,
+			   int server_port,
+			   char *dest_ip,
+			   int dest_port);
 
 /**
  * @brief closes the socket, should be called on shutdown
- * @param udp the udp channel struct
+ * @param priv the udp channel struct
 */
-void fcap_udp_cleanup(void *udp);
-
+void fcap_udp_cleanup(void *priv);
 
 #endif /* FCAP_UDP_H */

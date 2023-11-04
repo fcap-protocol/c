@@ -87,6 +87,8 @@ int fcap_udp_setup_channel(void *priv,
 	udp->dest_addr.sin_family = AF_INET;
 	udp->dest_addr.sin_addr.s_addr = inet_addr(dest_ip);
 	udp->dest_addr.sin_port = htons(dest_port);
+
+	return 0;
 }
 
 void fcap_udp_cleanup(void *priv)

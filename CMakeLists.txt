@@ -5,9 +5,11 @@ project(fcap-c)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+add_compile_options(-Wall -Werror)
+
 # if ($<CONFIG:MinSizeRel>)
-    add_compile_options(-Os -ffunction-sections -fdata-sections)
-    add_link_options(-ffunction-sections -fdata-sections)
+    # add_compile_options(-Os -ffunction-sections -fdata-sections)
+    # add_link_options(-ffunction-sections -fdata-sections)
 # endif()
 
 # Make the FCAP Library
