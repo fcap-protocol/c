@@ -10,7 +10,7 @@ TEST(FCAP_TESTS, basic_uint8)
 	int ret;
 	uint8_t recv_val;
 	uint8_t sent_val = 13;
-	fcap_packet_t packet;
+	struct fcap_packet packet;
 	FPacket pkt = &packet;
 	fcap_init_packet(pkt);
 
@@ -27,7 +27,7 @@ TEST(FCAP_TESTS, basic_uint16)
 	int ret;
 	uint16_t recv_val;
 	uint16_t sent_val = 13;
-	fcap_packet_t packet;
+	struct fcap_packet packet;
 	FPacket pkt = &packet;
 	fcap_init_packet(pkt);
 
@@ -45,7 +45,7 @@ TEST(FCAP_TESTS, basic_int16_positive)
 	int ret;
 	int16_t recv_val;
 	int16_t sent_val = std::pow(2, 15) - 1;
-	fcap_packet_t packet;
+	struct fcap_packet packet;
 	FPacket pkt = &packet;
 	fcap_init_packet(pkt);
 
@@ -62,7 +62,7 @@ TEST(FCAP_TESTS, basic_int16_negative)
 	int ret;
 	int16_t recv_val;
 	int16_t sent_val = -13;
-	fcap_packet_t packet;
+	struct fcap_packet packet;
 	FPacket pkt = &packet;
 	fcap_init_packet(pkt);
 
@@ -79,7 +79,7 @@ TEST(FCAP_TESTS, basic_int32)
 	int ret;
 	int32_t recv_val;
 	int32_t sent_val = std::pow(2, 31) - 10;
-	fcap_packet_t packet;
+	struct fcap_packet packet;
 	FPacket pkt = &packet;
 	fcap_init_packet(pkt);
 
@@ -96,7 +96,7 @@ TEST(FCAP_TESTS, basic_int64)
 	int ret;
 	int64_t recv_val;
 	int64_t sent_val = std::pow(2, 62) - 10;
-	fcap_packet_t packet;
+	struct fcap_packet packet;
 	FPacket pkt = &packet;
 	fcap_init_packet(pkt);
 
@@ -113,7 +113,7 @@ TEST(FCAP_TESTS, basic_float)
 	int ret;
 	float recv_val;
 	float sent_val = -19.28;
-	fcap_packet_t packet;
+	struct fcap_packet packet;
 	FPacket pkt = &packet;
 	fcap_init_packet(pkt);
 
@@ -129,7 +129,7 @@ TEST(FCAP_TESTS, missing_key)
 {
 	int ret;
 	float recv_val;
-	fcap_packet_t packet;
+	struct fcap_packet packet;
 	FPacket pkt = &packet;
 	fcap_init_packet(pkt);
 
@@ -143,7 +143,7 @@ TEST(FCAP_TESTS, basic_double)
 	int ret;
 	double recv_val;
 	double sent_val = -19.28;
-	fcap_packet_t packet;
+	struct fcap_packet packet;
 	FPacket pkt = &packet;
 	fcap_init_packet(pkt);
 
@@ -159,7 +159,7 @@ TEST(FCAP_TESTS, basic_double)
 TEST(FCAP_TESTS, two_keys)
 {
 	int ret;
-	fcap_packet_t packet;
+	struct fcap_packet packet;
 	FPacket pkt = &packet;
 	fcap_init_packet(pkt);
 
@@ -192,7 +192,7 @@ TEST(FCAP_TESTS, two_keys)
 TEST(FCAP_TESTS, duplicate_key)
 {
 	int ret;
-	fcap_packet_t packet;
+	struct fcap_packet packet;
 	FPacket pkt = &packet;
 	fcap_init_packet(pkt);
 
@@ -219,7 +219,7 @@ TEST(FCAP_TESTS, duplicate_key)
 TEST(FCAP_TESTS, multiple_different_keys)
 {
 	int ret;
-	fcap_packet_t packet;
+	struct fcap_packet packet;
 	FPacket pkt = &packet;
 	fcap_init_packet(pkt);
 
@@ -253,7 +253,7 @@ TEST(FCAP_TESTS, basic_binary)
 {
 	int i;
     int ret;
-	fcap_packet_t packet;
+	struct fcap_packet packet;
 	FPacket pkt = &packet;
 	fcap_init_packet(pkt);
 
@@ -279,7 +279,7 @@ TEST(FCAP_TESTS, safe_uint8)
 	int ret;
 	uint8_t recv_val;
 	uint8_t sent_val = 10;
-	fcap_packet_t packet;
+	struct fcap_packet packet;
 	FPacket pkt = &packet;
 	fcap_init_packet(pkt);
 
@@ -297,7 +297,7 @@ TEST(FCAP_TESTS, safe_uint16)
 	int ret;
 	uint16_t recv_val;
 	uint16_t sent_val = 10;
-	fcap_packet_t packet;
+	struct fcap_packet packet;
 	FPacket pkt = &packet;
 	fcap_init_packet(pkt);
 
@@ -315,7 +315,7 @@ TEST(FCAP_TESTS, safe_int16)
 	int ret;
 	int16_t recv_val;
 	int16_t sent_val = -10;
-	fcap_packet_t packet;
+	struct fcap_packet packet;
 	FPacket pkt = &packet;
 	fcap_init_packet(pkt);
 
@@ -333,7 +333,7 @@ TEST(FCAP_TESTS, safe_int32)
 	int ret;
 	int32_t recv_val;
 	int32_t sent_val = -10;
-	fcap_packet_t packet;
+	struct fcap_packet packet;
 	FPacket pkt = &packet;
 	fcap_init_packet(pkt);
 
@@ -351,7 +351,7 @@ TEST(FCAP_TESTS, safe_int64)
 	int ret;
 	int64_t recv_val;
 	int64_t sent_val = -10;
-	fcap_packet_t packet;
+	struct fcap_packet packet;
 	FPacket pkt = &packet;
 	fcap_init_packet(pkt);
 
@@ -369,7 +369,7 @@ TEST(FCAP_TESTS, safe_float)
 	int ret;
 	float recv_val;
 	float sent_val = 0.1234567;
-	fcap_packet_t packet;
+	struct fcap_packet packet;
 	FPacket pkt = &packet;
 	fcap_init_packet(pkt);
 
@@ -387,7 +387,7 @@ TEST(FCAP_TESTS, safe_double)
 	int ret;
 	double recv_val;
 	double sent_val = -0.12345671234567;
-	fcap_packet_t packet;
+	struct fcap_packet packet;
 	FPacket pkt = &packet;
 	fcap_init_packet(pkt);
 

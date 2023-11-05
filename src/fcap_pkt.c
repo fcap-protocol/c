@@ -62,6 +62,9 @@ static inline size_t fcap_get_ktv_size(struct fcap_ktv *view)
 
 void fcap_init_packet(FPacket pkt)
 {
+	if (!pkt)
+		return;
+
 	pkt->header.message_id = 0;
 	pkt->header.num_keys = 0;
 	pkt->header.type = 0;
@@ -128,17 +131,6 @@ int fcap_encode_packet(FPacket src, uint8_t *dest, size_t dest_len)
 	return size;
 }
 
-/**
- * @brief adds a given key to a packet
- * @param pkt the packet to add the key to
- * @param key they key to the value to
- * @param type the type of the value
- * @param value a pointer to some bytes which will be copied into the packet
- * @param size the length of the value you want to copy in, this should match 
- * the protocol defined length of the @type field
- * @returns 0 on success or -FCAP_ERROR on failure
- * @note -EINVAL will be returned if adding a key that already exists
- */
 int fcap_add_key(FPacket pkt, FKey key, FType type, void *value, size_t size)
 {
 	int key_i;
@@ -191,16 +183,6 @@ int fcap_add_key(FPacket pkt, FKey key, FType type, void *value, size_t size)
 	return 0;
 }
 
-/**
- * @brief gets a specific key from the packet
- * @param pkt the packet to get the key from
- * @param key the requested key
- * @param data an output buffer for the value to be placed in
- * @param size the size of the output buffer
- * @returns the FType of the key on success or -FCAP_ERROR on failure
- * @note when the key type is binary, the first byte of the data buffer 
- * will be the length of the remaining data 
- */
 int fcap_get_key(FPacket pkt, FKey key, void *data, size_t size)
 {
 	int key_i;
@@ -247,6 +229,9 @@ int fcap_has_key(FPacket pkt, FKey key)
 	bool found;
 	struct fcap_ktv *view;
 
+	if (!pkt)
+		return -FCAP_ENONE;
+
 	view = (struct fcap_ktv *)pkt->ktv_bytes;
 
 	/* Find the end of the packets or if key exists */
@@ -265,11 +250,15 @@ int fcap_has_key(FPacket pkt, FKey key)
 	return found;
 }
 
-#ifdef FCAP_SAFE
-/*
- * Statically typed convenience functions, primarily for enforcing compiler safe
- * usage of library functions
- */
+inline enum fcap_pkt_type fcap_get_type(FPacket pkt)
+{
+	return pkt->header.type ? FCAP_RESPONSE : FCAP_REQUEST;
+}
+
+inline void fcap_set_type(FPacket pkt, enum fcap_pkt_type type)
+{
+	pkt->header.type = type;
+}
 
 inline int fcap_add_key_bin(FPacket pkt, FKey key, uint8_t *data, size_t len)
 {
@@ -374,8 +363,6 @@ inline int fcap_get_key_d64(FPacket pkt, FKey key, double *value)
 	else
 		return FCAP_ENONE;
 }
-
-#endif /* FCAP_SAFE */
 
 #ifdef FCAP_DEBUG
 

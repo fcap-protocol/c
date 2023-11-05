@@ -5,7 +5,6 @@
 #include <stdint.h>
 
 #define FCAP_DEBUG
-#define FCAP_SAFE
 
 #define MTU 255
 
@@ -99,20 +98,74 @@ struct fcap_packet {
 	struct fcap_header header;
 	ktv_bytes_t ktv_bytes;
 } __attribute__((packed));
-
-typedef struct fcap_packet fcap_packet_t;
 typedef struct fcap_packet *FPacket;
 
 /* Creating & Sending Packets */
+
+/**
+ * @brief Resets a packet to defaults
+ * @param pkt the packet to reset / initialise
+*/
 void fcap_init_packet(FPacket pkt);
+
+/**
+ * @brief gets the number of used bytes for a given packet inclusive of
+ * all headers and data bytes.
+*/
 int fcap_get_num_bytes(FPacket pkt);
 
+/**
+ * @brief adds a given key to a packet
+ * @param pkt the packet to add the key to
+ * @param key they key to the value to
+ * @param type the type of the value
+ * @param value a pointer to some bytes which will be copied into the packet
+ * @param size the length of the value you want to copy in, this should match 
+ * the protocol defined length of the @type field
+ * @returns 0 on success or -FCAP_ERROR on failure
+ * @note -EINVAL will be returned if adding a key that already exists
+ */
 int fcap_add_key(FPacket pkt, FKey key, FType type, void *value,
 		 size_t size);
+
+/**
+ * @brief gets a specific key from the packet
+ * @param pkt the packet to get the key from
+ * @param key the requested key
+ * @param data an output buffer for the value to be placed in
+ * @param size the size of the output buffer
+ * @returns the FType of the key on success or -FCAP_ERROR on failure
+ * @note when the key type is binary, the first byte of the data buffer 
+ * will be the length of the remaining data 
+ */
 int fcap_get_key(FPacket pkt, FKey key, void *data, size_t size);
+
+/**
+ * @brief returns if a given packet has the requested key
+ * @param pkt the packet to check
+ * @param key the key to look for
+ * @returns 1 if the key exists, 0 if not, -errno on failure
+*/
 int fcap_has_key(FPacket pkt, FKey key);
 
-#ifdef FCAP_SAFE
+/**
+ * @brief gets the type of the packet, either request of response
+ * @param pkt the packet to check
+ * @returns the packet type
+*/
+enum fcap_pkt_type fcap_get_type(FPacket pkt);
+
+/**
+ * @brief sets the type of the packet, either request of response
+ * @param pkt the packet to set
+*/
+void fcap_set_type(FPacket pkt, enum fcap_pkt_type type);
+
+/*
+ * Statically typed convenience functions, primarily for enforcing compiler safe
+ * usage of library functions
+ */
+
 int fcap_add_key_bin(FPacket pkt, FKey key, uint8_t *data, size_t len);
 int fcap_add_key_u8(FPacket pkt, FKey key, uint8_t value);
 int fcap_add_key_u16(FPacket pkt, FKey key, uint16_t value);
@@ -129,7 +182,6 @@ int fcap_get_key_i32(FPacket pkt, FKey key, int32_t *value);
 int fcap_get_key_i64(FPacket pkt, FKey key, int64_t *value);
 int fcap_get_key_f32(FPacket pkt, FKey key, float *value);
 int fcap_get_key_d64(FPacket pkt, FKey key, double *value);
-#endif /* FCAP_SAFE */
 
 #ifdef FCAP_DEBUG
 void fcap_debug_ktv(uint8_t *bytes, size_t max_size);

@@ -6,6 +6,7 @@
 #include <poll.h>
 #include <unistd.h>
 #include <string.h>
+#include <errno.h>
 
 int fcap_udp_send_bytes(void *priv, uint8_t *bytes, size_t length)
 {
@@ -25,35 +26,45 @@ int fcap_udp_send_bytes(void *priv, uint8_t *bytes, size_t length)
 	return ret;
 }
 
-int fcap_udp_poll(void *priv)
-{
-	int ret;
-	fcap_udp_t *udp = priv;
+// int fcap_udp_poll(void *priv)
+// {
+// 	int ret;
+// 	fcap_udp_t *udp = priv;
 
-	struct pollfd poll_fds[1];
-	poll_fds[0].fd = udp->sockfd;
-	poll_fds[0].events = POLLIN | POLLPRI;
+// 	struct pollfd poll_fds[1];
+// 	poll_fds[0].fd = udp->sockfd;
+// 	poll_fds[0].events = POLLIN | POLLPRI;
 
-	/* We poll a single fd to check if it's ready*/
-	ret = poll(poll_fds, 1, 0);
+// 	/* We poll a single fd to check if it's ready*/
+// 	ret = poll(poll_fds, 1, 0);
 
-	if (ret < 0) {
-		return -FCAP_EINVAL;
-	}
+// 	if (ret < 0) {
+// 		return -FCAP_EINVAL;
+// 	}
 
-	return ret;
-}
+// 	return ret;
+// }
 
 int fcap_udp_get_bytes(void *priv, uint8_t *bytes, size_t length)
 {
+	int ret;
 	fcap_udp_t *udp = priv;
-	return recv(udp->sockfd, bytes, length, MSG_DONTWAIT);
+	ret = recv(udp->sockfd, bytes, length, MSG_DONTWAIT);
+
+	/* Normalize errors */
+	if (ret < 0)
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
+			return 0;
+		else
+			return -EINVAL;
+	else
+		return ret;
 }
 
-int fcap_udp_setup_channel(void *priv,
-			   int server_port,
-			   char *dest_ip,
-			   int dest_port)
+int fcap_udp_setup_transport(void *priv,
+			     int server_port,
+			     char *dest_ip,
+			     int dest_port)
 {
 	int ret;
 	fcap_udp_t *udp = priv;
