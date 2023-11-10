@@ -6,7 +6,7 @@
 
 #define THIS_PORT (FCAP_PORT + 1)
 #define PEER_PORT FCAP_PORT
-#define PEER_IP "127.0.0.1"
+#define PEER_IP "10.2.10.185"
 
 FCAP_CREATE_UDP_TRANSPORT(my_udp);
 FCAP_SET_TRANSPORTS(my_transports, &my_udp)
