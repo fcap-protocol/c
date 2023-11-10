@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.25)
+cmake_minimum_required(VERSION 3.22)
 project(fcap-c)
 
 # GoogleTest requires at least C++14
@@ -38,3 +38,10 @@ target_link_libraries(fcap_client fcap fcap_udp)
 add_executable(fcap_tests tests/protocol_tests.cpp)
 target_link_libraries(fcap_tests fcap GTest::gtest GTest::gtest_main GTest::gmock GTest::gmock_main)
 add_test(FcapTest fcap_tests)
+
+# Automatically build and update the docs when we build the fcap library
+add_custom_command(
+  TARGET fcap POST_BUILD
+  WORKING_DIRECTORY ../
+  COMMAND doxygen ./docs.config
+  VERBATIM)

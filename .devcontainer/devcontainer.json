@@ -1,6 +1,7 @@
 {
   "name": "FCAP C Dev",
-  "image": "mcr.microsoft.com/devcontainers/cpp",
+  // "image": "mcr.microsoft.com/devcontainers/cpp",
+  "build": { "dockerfile": "Dockerfile" },
   "customizations": {
     "vscode": {
       "extensions": [
