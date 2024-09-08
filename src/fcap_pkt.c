@@ -1,486 +1,163 @@
-#include <assert.h>
-#include <fcap_pkt.h>
-#include <stdbool.h>
-#include <string.h>
+#include "string.h"
+#include "fcap_pkt.h"
 
-/* For debug only */
-#ifdef FCAP_DEBUG
-#include <stdio.h>
-#endif /* FCAP_DEBUG */
-
-#define FCAP_VERSION 0
-
-/* Protocol defined sizes */
-#define FCAP_HEADER_SIZE 2
-#define FCAP_KTV_HEADER_SIZE 1
-#define FCAP_KTV_BINARY_HEADER_SIZE (FCAP_KTV_HEADER_SIZE + 1)
-
-static_assert(sizeof(struct fcap_header) == FCAP_HEADER_SIZE,
-	      "Header Size Mismatch!");
-
-static_assert(sizeof(struct fcap_packet) == MTU,
-	      "FCAP Packet doesn't match expected MTU");
-
-static size_t fcap_type_sizes[] = {
-	[FCAP_BINARY] = 0,
-	[FCAP_UINT8] = sizeof(uint8_t),
-	[FCAP_UINT16] = sizeof(uint16_t),
-	[FCAP_INT16] = sizeof(int16_t),
-	[FCAP_INT32] = sizeof(int32_t),
-	[FCAP_INT64] = sizeof(int64_t),
-	[FCAP_FLOAT] = sizeof(float),
-	[FCAP_DOUBLE] = sizeof(double),
-};
-
-/**
- * @brief gets the size of a ktv, excluding header byte
- * @param view a pointer to the first byte of the ktv
- * @returns the size of the ktv
- * @note this function does no error checking, it assumes a valid ktv
-*/
-static inline size_t fcap_get_value_size(struct fcap_ktv *view)
+static pkt_len_t fcap_pkt_buffer_remaining(FPktBuffer pkt_buf)
 {
-	if (view->type == FCAP_BINARY)
-		return view->value.binary.length;
-	else
-		return fcap_type_sizes[view->type];
+	return pkt_buf->buf_cur - pkt_buf->buf_start;
 }
 
-/**
- * @brief gets the size of a ktv, including header byte
- * @param view a pointer to the first byte of the ktv
- * @returns the size of the ktv
- * @note this function does no error checking, it assumes a valid ktv
-*/
-static inline size_t fcap_get_ktv_size(struct fcap_ktv *view)
+static pkt_len_t fcap_pkt_buffer_used(FPktBuffer pkt_buf)
 {
-	if (view->type == FCAP_BINARY)
-		return view->value.binary.length + FCAP_KTV_BINARY_HEADER_SIZE;
-	else
-		return fcap_type_sizes[view->type] + FCAP_KTV_HEADER_SIZE;
+	return pkt_buf->buf_end - pkt_buf->buf_cur;
 }
 
-void fcap_init_packet(FPacket pkt)
+bytes_t fcap_pkt_buffer_alloc(FPktBuffer pkt_buf, pkt_len_t len)
 {
-	if (!pkt)
-		return;
-
-	pkt->header.message_id = 0;
-	pkt->header.num_keys = 0;
-	pkt->header.type = 0;
-	pkt->header.version = FCAP_VERSION;
-
-	memset(pkt->ktv_bytes, 0, sizeof(ktv_bytes_t));
+	pkt_len_t remaining = fcap_pkt_buffer_remaining(pkt_buf);
+	if (remaining < len)
+		return NULL;
+	pkt_buf->buf_cur -= len;
+	return pkt_buf->buf_cur;
 }
 
-int fcap_get_num_bytes(FPacket pkt)
+pkt_len_t fcap_pkt_buffer_free(FPktBuffer pkt_buf, pkt_len_t len)
 {
-	int key_i;
-	size_t size = 0;
-
-	for (key_i = 0; key_i < pkt->header.num_keys; key_i++)
-		size += fcap_get_ktv_size(
-			(struct fcap_ktv *)&pkt->ktv_bytes[size]);
-
-	size += sizeof(struct fcap_header);
-
-	return size;
+	pkt_len_t used = fcap_pkt_buffer_used(pkt_buf);
+	if (used < len)
+		return 0;
+	pkt_buf->buf_cur += len;
+	return len;
 }
 
-/**
- * @brief Consumes raw bytes for consumption as an FCAP packet
- * @param dest the packet to store the incoming bytes into
- * @param src the raw incoming bytes
- * @param src_len the number of bytes to consume, this cannot be greater than
- * the defined MTU
- * @returns 0 on success and all bytes were consumed or -FCAP_ERROR on failure
-*/
-int fcap_decode_packet(FPacket dest, uint8_t *src, int src_len)
+pkt_len_t fcap_pkt_buffer_append(FPktBuffer pkt_buf, bytes_t buf, pkt_len_t len)
 {
-	if (src_len > MTU)
-		return -FCAP_EINVAL;
-
-	/* Copy all values */
-	memcpy(&dest, src, src_len);
-
-	/* TODO: Validate packet */
-
-	return 0;
+	bytes_t pkt_cur = fcap_pkt_buffer_alloc(pkt_buf, len);
+	if (!pkt_cur)
+		return 0;
+	memcpy(pkt_cur, buf, len);
+	return len;
 }
 
-/** 
- * @brief Copies the bytes from a packet into a destination buffer
- * ready to be sent across a transport
- * @param src the packet to send
- * @param dest the byte buffer to copy the packet into
- * @param dest_len the size of the @dest buffer that can be filled
- * @returns the number of bytes put into the buffer to be sent
-*/
-int fcap_encode_packet(FPacket src, uint8_t *dest, size_t dest_len)
+static bool fcap_pkt_buffer_init(FPktBuffer pkt_buf, bytes_t buf, pkt_len_t cur_len, pkt_len_t total_len)
 {
-	size_t size = 0;
+	if (total_len == 0 || total_len > MTU)
+		return false;
+	pkt_buf->buf_start = buf;
+	pkt_buf->buf_end = buf + total_len;
+	pkt_buf->buf_cur = pkt_buf->buf_end;
 
-	size = fcap_get_num_bytes(src);
-
-	if (dest_len < size)
-		return -FCAP_ENOMEM;
-
-	if (!memcpy(dest, src, size))
-		return -FCAP_ENOMEM;
-
-	return size;
-}
-
-int fcap_add_key(FPacket pkt, FKey key, FType type, void *value, size_t size)
-{
-	int key_i;
-	size_t idx;
-	size_t value_size;
-	struct fcap_ktv *view;
-
-	/* TODO: Check there is enough bytes remaining in the packet 
-	to add this value safely */
-
-	view = (struct fcap_ktv *)pkt->ktv_bytes;
-
-	/* Find the end of the packets or if key exists */
-	idx = 0;
-	for (key_i = 0; key_i < pkt->header.num_keys; key_i++) {
-		/* Check if the key already exists */
-		if (view->key == key)
-			return -FCAP_EINVAL;
-
-		idx += fcap_get_ktv_size(view);
-		view = (struct fcap_ktv *)&pkt->ktv_bytes[idx];
+	if (cur_len > 0) {
+		bytes_t pkt_cur = fcap_pkt_buffer_alloc(pkt_buf, cur_len);
+		memmove(pkt_cur, buf, cur_len);
 	}
+	return true;
+}
 
-	/* Copy the type */
-	view->key = key;
-	view->type = type;
+static void fcap_pkt_buffer_deinit(FPktBuffer pkt_buf, bytes_t buf, pkt_len_t *cur_len, pkt_len_t total_len)
+{
+	*cur_len = fcap_pkt_buffer_used(pkt_buf);
+	memmove(buf, pkt_buf->buf_cur, *cur_len);
+	memset(pkt_buf, 0, sizeof(struct pkt_buffer));
+}
 
-	if (type == FCAP_BINARY) {
-		value_size = size;
-		view->value.binary.length = size;
-		if (!memcpy(view->value.binary.value, value, value_size))
-			return -FCAP_ENOMEM;
+void fcap_request_init(FRequest req, FEndpoint endpoint, bytes_t buf, pkt_len_t cur_len, pkt_len_t total_len)
+{
+	memset(req, 0, sizeof(struct fcap_request));
+	req->endpoint = endpoint;
+	fcap_pkt_buffer_init(&req->_priv.buf, buf, cur_len, total_len);
+}
 
+void fcap_response_init(FResponse res, FEndpoint endpoint, bytes_t buf, pkt_len_t cur_len, pkt_len_t total_len)
+{
+	memset(res, 0, sizeof(struct fcap_response));
+	res->endpoint = endpoint;
+	fcap_pkt_buffer_init(&res->_priv.buf, buf, cur_len, total_len);
+}
+
+pkt_len_t fcap_request_append(FRequest req, bytes_t playload, pkt_len_t len)
+{
+	return fcap_pkt_buffer_append(&req->_priv.buf, playload, len);
+}
+
+pkt_len_t fcap_response_append(FResponse res, bytes_t playload, pkt_len_t len)
+{
+	return fcap_pkt_buffer_append(&res->_priv.buf, playload, len);
+}
+
+FError fcap_pkt_encode(FPkt pkt, bytes_t buf, pkt_len_t *cur_len, pkt_len_t total_len)
+{
+	if (!pkt->is_response) {
+		pkt_len_t len = fcap_pkt_buffer_used(&pkt->req->_priv.buf);
+		uint8_t header_buf[HEADER_LEN] = {};
+		struct PacketRequest pkt_req = {
+			.header = { .version = VERSION_V1,
+				    .is_res = false,
+				    .reserved = 0,
+				    .id = pkt->req->_priv.id,
+				    .len = len },
+			.cmd = pkt->req->cmd,
+		};
+		EncodePacketRequest(&pkt_req, (bytes_t)&header_buf);
+		if (!fcap_pkt_buffer_append(&pkt->req->_priv.buf, header_buf, sizeof(header_buf)))
+			return FCAP_ENOMEM;
+		fcap_pkt_buffer_deinit(&pkt->req->_priv.buf, buf, cur_len, total_len);
 	} else {
-		value_size = fcap_type_sizes[type];
-
-		/* 
-		 * Check they are passing in the correct length 
-		 * for the type they asked for 
-		 */
-		if (size != value_size)
-			return -FCAP_EINVAL;
-
-		if (!memcpy(view->value.value, value, value_size))
-			return -FCAP_ENOMEM;
+		pkt_len_t len = fcap_pkt_buffer_used(&pkt->res->_priv.buf);
+		uint8_t header_buf[HEADER_LEN] = {};
+		struct PacketResponse pkt_res = {
+			.header = { .version = VERSION_V1,
+				    .is_res = false,
+				    .reserved = 0,
+				    .id = pkt->res->_priv.id,
+				    .len = len },
+			.status = pkt->res->status,
+		};
+		EncodePacketResponse(&pkt_res, (bytes_t)&header_buf);
+		if (!fcap_pkt_buffer_append(&pkt->res->_priv.buf, header_buf, sizeof(header_buf)))
+			return FCAP_ENOMEM;
+		fcap_pkt_buffer_deinit(&pkt->res->_priv.buf, buf, cur_len, total_len);
 	}
 
-	pkt->header.num_keys++;
-
-	return 0;
+	return FCAP_OK;
 }
 
-int fcap_get_key(FPacket pkt, FKey key, void *data, size_t size)
+FError fcap_pkt_decode(FPkt pkt, FEndpoint endpoint, bytes_t buf, pkt_len_t cur_len, pkt_len_t total_len)
 {
-	int key_i;
-	size_t idx;
-	bool found;
-	size_t value_size;
-	struct fcap_ktv *view;
+	// memset(pkt, 0, sizeof(struct fcap_pkt));
 
-	view = (struct fcap_ktv *)pkt->ktv_bytes;
+	// Check header length
+	if (cur_len < HEADER_LEN)
+		return FCAP_EINVAL;
+	struct PacketHeader header = {};
+	DecodePacketHeader(&header, buf);
 
-	/* Find the end of the packets or if key exists */
-	idx = 0;
-	found = false;
-	for (key_i = 0; key_i < pkt->header.num_keys; key_i++) {
-		if (view->key == key) {
-			found = true;
-			break;
-		}
+	// Check version
+	if (header.version != VERSION_V1)
+		return FCAP_EINVAL;
 
-		idx += fcap_get_ktv_size(view);
-		view = (struct fcap_ktv *)&pkt->ktv_bytes[idx];
+	// Check body len
+	pkt_len_t body_len = cur_len - HEADER_LEN;
+	if (body_len != header.len)
+		return FCAP_EINVAL;
+
+	pkt->is_response = header.is_res;
+	if (!pkt->is_response) {
+		fcap_request_init(pkt->req, endpoint, buf, cur_len, total_len);
+		struct PacketRequest pkt_req = {};
+		DecodePacketRequest(&pkt_req, pkt->req->_priv.buf.buf_cur);
+		fcap_pkt_buffer_free(&pkt->req->_priv.buf, HEADER_LEN);
+		pkt->req->is_inbound = true;
+		pkt->req->cmd = pkt_req.cmd;
+		pkt->req->_priv.id = pkt_req.header.id;
+		pkt->req->_priv.sent = true;
+	} else {
+		fcap_response_init(pkt->res, endpoint, buf, cur_len, total_len);
+		struct PacketResponse pkt_res = {};
+		DecodePacketResponse(&pkt_res, pkt->res->_priv.buf.buf_cur);
+		pkt->res->is_inbound = true;
+		pkt->res->status = pkt_res.status;
+		pkt->res->_priv.id = pkt_res.header.id;
+		pkt->res->_priv.sent = true;
 	}
-
-	if (!found)
-		return -FCAP_ENOKEY;
-
-	value_size = fcap_get_value_size(view);
-	if (view->type == FCAP_BINARY)
-		value_size++;
-
-	if (size < value_size)
-		return -FCAP_ENOMEM;
-
-	if (!memcpy(data, view->value.value, value_size))
-		return -FCAP_ENOMEM;
-
-	return view->type;
+	return FCAP_OK;
 }
-
-int fcap_has_key(FPacket pkt, FKey key)
-{
-	int key_i;
-	size_t idx;
-	bool found;
-	struct fcap_ktv *view;
-
-	if (!pkt)
-		return -FCAP_ENONE;
-
-	view = (struct fcap_ktv *)pkt->ktv_bytes;
-
-	/* Find the end of the packets or if key exists */
-	idx = 0;
-	found = false;
-	for (key_i = 0; key_i < pkt->header.num_keys; key_i++) {
-		if (view->key == key) {
-			found = true;
-			break;
-		}
-
-		idx += fcap_get_ktv_size(view);
-		view = (struct fcap_ktv *)&pkt->ktv_bytes[idx];
-	}
-
-	return found;
-}
-
-inline enum fcap_pkt_type fcap_get_type(FPacket pkt)
-{
-	return pkt->header.type ? FCAP_RESPONSE : FCAP_REQUEST;
-}
-
-inline void fcap_set_type(FPacket pkt, enum fcap_pkt_type type)
-{
-	pkt->header.type = type;
-}
-
-inline int fcap_add_key_bin(FPacket pkt, FKey key, uint8_t *data, size_t len)
-{
-	return fcap_add_key(pkt, key, FCAP_BINARY, data, len);
-}
-
-inline int fcap_add_key_u8(FPacket pkt, FKey key, uint8_t value)
-{
-	return fcap_add_key(pkt, key, FCAP_UINT8, &value, sizeof(value));
-}
-
-inline int fcap_add_key_u16(FPacket pkt, FKey key, uint16_t value)
-{
-	return fcap_add_key(pkt, key, FCAP_UINT16, &value, sizeof(value));
-}
-
-inline int fcap_add_key_i16(FPacket pkt, FKey key, int16_t value)
-{
-	return fcap_add_key(pkt, key, FCAP_INT16, &value, sizeof(value));
-}
-
-inline int fcap_add_key_i32(FPacket pkt, FKey key, int32_t value)
-{
-	return fcap_add_key(pkt, key, FCAP_INT32, &value, sizeof(value));
-}
-
-inline int fcap_add_key_i64(FPacket pkt, FKey key, int64_t value)
-{
-	return fcap_add_key(pkt, key, FCAP_INT64, &value, sizeof(value));
-}
-
-inline int fcap_add_key_f32(FPacket pkt, FKey key, float value)
-{
-	return fcap_add_key(pkt, key, FCAP_FLOAT, &value, sizeof(value));
-}
-
-inline int fcap_add_key_d64(FPacket pkt, FKey key, double value)
-{
-	return fcap_add_key(pkt, key, FCAP_DOUBLE, &value, sizeof(value));
-}
-
-inline int fcap_get_key_bin(FPacket pkt, FKey key, uint8_t *data, size_t len)
-{
-	if (fcap_get_key(pkt, key, data, len) != FCAP_BINARY)
-		return -FCAP_ETYPE;
-	else
-		return FCAP_ENONE;
-}
-
-inline int fcap_get_key_u8(FPacket pkt, FKey key, uint8_t *value)
-{
-	if (fcap_get_key(pkt, key, value, sizeof(*value)) != FCAP_UINT8)
-		return -FCAP_ETYPE;
-	else
-		return FCAP_ENONE;
-}
-
-inline int fcap_get_key_u16(FPacket pkt, FKey key, uint16_t *value)
-{
-	if (fcap_get_key(pkt, key, value, sizeof(*value)) != FCAP_UINT16)
-		return -FCAP_ETYPE;
-	else
-		return FCAP_ENONE;
-}
-
-inline int fcap_get_key_i16(FPacket pkt, FKey key, int16_t *value)
-{
-	if (fcap_get_key(pkt, key, value, sizeof(*value)) != FCAP_INT16)
-		return -FCAP_ETYPE;
-	else
-		return FCAP_ENONE;
-}
-
-inline int fcap_get_key_i32(FPacket pkt, FKey key, int32_t *value)
-{
-	if (fcap_get_key(pkt, key, value, sizeof(*value)) != FCAP_INT32)
-		return -FCAP_ETYPE;
-	else
-		return FCAP_ENONE;
-}
-
-inline int fcap_get_key_i64(FPacket pkt, FKey key, int64_t *value)
-{
-	if (fcap_get_key(pkt, key, value, sizeof(*value)) != FCAP_INT64)
-		return -FCAP_ETYPE;
-	else
-		return FCAP_ENONE;
-}
-
-inline int fcap_get_key_f32(FPacket pkt, FKey key, float *value)
-{
-	if (fcap_get_key(pkt, key, value, sizeof(*value)) != FCAP_FLOAT)
-		return -FCAP_ETYPE;
-	else
-		return FCAP_ENONE;
-}
-
-inline int fcap_get_key_d64(FPacket pkt, FKey key, double *value)
-{
-	if (fcap_get_key(pkt, key, value, sizeof(*value)) != FCAP_DOUBLE)
-		return -FCAP_ETYPE;
-	else
-		return FCAP_ENONE;
-}
-
-#ifdef FCAP_DEBUG
-
-/**
- * @brief displays info about a given ktv to stdout
- * @param bytes a pointer to the first byte of a single ktv
- * @param max_size the maximum number of bytes available to read
- */
-void fcap_debug_ktv(uint8_t *bytes, size_t max_size)
-{
-	struct fcap_ktv *view = (struct fcap_ktv *)bytes;
-
-	if (max_size < FCAP_KTV_HEADER_SIZE) {
-		printf("Not enough bytes to read KTV Header");
-		return;
-	}
-
-	printf("  Key: %d\n", view->key);
-	printf("  Type: %d ", view->type);
-	max_size--;
-
-	if (max_size < fcap_type_sizes[view->type]) {
-		printf("Not enough bytes, only %ld remaining.\n", max_size);
-		return;
-	}
-
-	switch (view->type) {
-	case FCAP_BINARY: {
-		printf("(binary)\n");
-
-		if (max_size < 1) {
-			printf("Not enough bytes to read binary length!\n");
-			return;
-		}
-
-		size_t len = view->value.binary.length;
-		max_size--;
-		printf("Length: %ld\n", len);
-
-		if (max_size < len) {
-			printf("Not enough bytes to read binary.");
-			printf("Only %ld remaining bytes\n", max_size);
-		}
-
-		printf("  Binary (hex): ");
-		for (int i = 0; i < len; i++) {
-			printf("%02x ", view->value.binary.value[i]);
-		}
-		break;
-	}
-	case FCAP_UINT8: {
-		printf("(uint8)\n");
-		printf("  Value: %d\n", *(uint8_t *)view->value.value);
-		break;
-	}
-	case FCAP_UINT16: {
-		printf("(uint16)\n");
-		printf("  Value: %d\n", *(uint16_t *)view->value.value);
-		break;
-	}
-	case FCAP_INT16: {
-		printf("(int16)\n");
-		printf("  Value: %d\n", *(int16_t *)view->value.value);
-		break;
-	}
-	case FCAP_INT32: {
-		printf("(int32)\n");
-		printf("  Value: %d\n", *(int32_t *)view->value.value);
-		break;
-	}
-	case FCAP_INT64: {
-		printf("(int64)\n");
-		printf("  Value: %ld\n", *(int64_t *)view->value.value);
-		break;
-	}
-	case FCAP_FLOAT: {
-		printf("(float)\n");
-		printf("  Value: %f\n", *(float *)view->value.value);
-		break;
-	}
-	case FCAP_DOUBLE: {
-		printf("(double)\n");
-		printf("  Value: %lf\n", *(double *)view->value.value);
-		break;
-	}
-	default:
-		printf("Unknown Type!\n");
-		break;
-	}
-}
-
-void fcap_debug_packet(FPacket pkt)
-{
-	int idx;
-	int key_i;
-	struct fcap_ktv *view;
-
-	printf("Header:\n");
-	printf("  Version: %d\n", pkt->header.version);
-	printf("  Num keys: %d\n", pkt->header.num_keys);
-	printf("  Message ID: %d\n", pkt->header.message_id);
-	printf("  Type: %d - ", pkt->header.type);
-	if (pkt->header.type == FCAP_REQUEST)
-		printf("request\n");
-	else
-		printf("response\n");
-
-	view = (struct fcap_ktv *)pkt->ktv_bytes;
-
-	/* Print each KTV */
-	idx = 0;
-	for (key_i = 0; key_i < pkt->header.num_keys; key_i++) {
-		printf("KTV [%d]\n", key_i);
-		fcap_debug_ktv((uint8_t *)view, MTU - (FCAP_HEADER_SIZE + idx));
-
-		idx += fcap_get_ktv_size(view);
-		view = (struct fcap_ktv *)&pkt->ktv_bytes[idx];
-	}
-}
-
-#endif /* FCAP_DEBUG */

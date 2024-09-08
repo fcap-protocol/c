@@ -22,4 +22,5 @@ RUN chmod +x /tmp/install-vcpkg.sh \
     && rm -f /tmp/install-vcpkg.sh
 
 #  install additional OS packages.
-RUN apt-get -y install --no-install-recommends doxygen
+RUN apt-get -y install --no-install-recommends doxygen python3 python3-pip socat
+RUN pip install bitproto

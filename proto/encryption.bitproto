@@ -1,0 +1,6 @@
+proto encryption_packet
+
+message EncriptedHeader{
+    uint16 peer_id = 1;
+    uint24 ticks = 2;
+}

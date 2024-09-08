@@ -1,56 +1,35 @@
 #include <fcap.h>
-#include <fcap_udp.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <transports/transport_udp.h>
 
-// void print_bytes(void *bytes, size_t len)
-// {
-// 	uint8_t *bytes_arr = bytes;
+FCAP_CREATE_UDP_TRANSPORT(udp);
 
-// 	printf("Bytes:\n");
-// 	for (int i = 0; i < len; i++) {
-// 		printf("[%d]: 0x%02x '%c'\n", i, bytes_arr[i], bytes_arr[i]);
-// 	}
-// }
+FCAP_SET_TRANSPORTS(transports, (FTransport)&t_udp);
 
-// #define SIZE 64
+FError on_req(const void *priv, FApp app, FRequest req, FResponse res, NextReq next)
+{
+	if (req->is_inbound) {
+		res->status = 255;
+		uint8_t buf[] = { 128 };
+		fcap_response_append(res, buf, sizeof(buf));
+		fcap_send_response(app, req, res);
+		return FCAP_OK;
+	} else {
+		return next(app, req, res);
+	}
+}
 
-// fcap_udp_t transport1;
+struct fcap_middleware handler = { .priv = (void *)1, .on_request = on_req, .on_response = NULL };
+
+FCAP_SET_MIDDLEWARE(middleware, &handler);
+
+FCAP_CREATE_APP(app, transports, middleware);
 
 int main()
 {
-	// int ret;
-	// ret = fcap_udp_setup_transport(&transport1, 12345, "127.0.0.1", 8080);
-	// if (ret < 0) {
-	// 	printf("Error setting up udp transport: %d\n", ret);
-	// 	exit(1);
-	// }
+	fcap_init(app);
+	transport_udp_init(udp, 1434);
 
-	// uint8_t bytes[SIZE];
-
-
-	// printf("Running!\n");
-	// while (1) {
-	// 	if (fcap_udp_poll(&transport1) > 0) {
-			
-	// 		printf("Got bytes!\n");
-
-	// 		ret = fcap_udp_get_bytes(&transport1, bytes, SIZE);
-
-	// 		if (ret > 0) {
-	// 			print_bytes(bytes, SIZE);
-	// 		} 
-
-	// 		ret = fcap_udp_send_bytes(&transport1, bytes, SIZE);
-	// 		if (ret < 0) {
-	// 			printf("error sending!\n");
-	// 		} else {
-	// 			printf("Sent %d bytes!\n", ret);
-	// 		}
-	// 		break;
-	// 	}
-	// }
-	// fcap_udp_cleanup(&transport1);
-	// printf("Done\n");
+	while (true) {
+		fcap_poll(app);
+	}
 }

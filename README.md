@@ -15,3 +15,7 @@ The library can be run using the vscode build function. This will automatically 
 
 ### Testing
 Unit tests can be run with CTest. This uses the GTest framework.
+
+UDP Testing
+
+printf "\x00\x00\x10\x0\x02\xff" | socat - UDP:localhost:1434

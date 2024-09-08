@@ -1,0 +1,50 @@
+proto fcap_packet
+
+const MTU = 255;
+const HEADER_LEN = 5;
+const BODY_LEN = MTU - HEADER_LEN;
+
+// type Body = byte[BODY_LEN]
+
+enum Version : uint3 {
+    VERSION_V1 = 0;
+    VERSION_V2 = 1;
+    VERSION_V3 = 2;
+    VERSION_V4 = 3;
+    VERSION_V5 = 4;
+    VERSION_V6 = 5;
+    VERSION_V7 = 6;
+    VERSION_V8 = 7;
+}
+
+enum Status : uint8 {
+    STATUS_OK = 0;
+    STATUS_ERROR = 1;
+}
+
+message PacketHeader {
+    option max_bytes = 4;
+    // 1 byte
+    Version version = 1;
+    bool is_res = 2;
+    uint4 reserved = 3
+    // 3 bytes
+    uint12 id = 10;
+    uint12 len = 11;
+}
+
+message PacketRequest {
+    option max_bytes = 5;
+
+    PacketHeader header = 1
+    uint8 cmd = 2;
+    // Body body = 3;
+}
+
+message PacketResponse {
+    option max_bytes = 5;
+
+    PacketHeader header = 1;
+    Status status = 2;
+    // Body body = 3;
+}

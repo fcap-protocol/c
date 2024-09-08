@@ -1,7 +1,13 @@
 {
   "name": "FCAP C Dev",
   // "image": "mcr.microsoft.com/devcontainers/cpp",
-  "build": { "dockerfile": "Dockerfile" },
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "runArgs": [
+    "--name=fcap",
+    "--network=host"
+  ],
   "customizations": {
     "vscode": {
       "extensions": [
@@ -10,9 +16,8 @@
       ]
     }
   },
-
-  "forwardPorts": [
-    3000,
-    1434
-  ]
+  // "forwardPorts": [
+  //   3000,
+  //   1434
+  // ]
 }
