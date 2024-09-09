@@ -7,15 +7,14 @@ FCAP_SET_TRANSPORTS(transports, (FTransport)&t_udp);
 
 FError on_req(const void *priv, FApp app, FRequest req, FResponse res, NextReq next)
 {
-	if (req->is_inbound) {
-		res->status = 255;
-		uint8_t buf[] = { 128 };
-		fcap_response_append(res, buf, sizeof(buf));
-		fcap_send_response(app, req, res);
-		return FCAP_OK;
-	} else {
-		return next(app, req, res);
-	}
+    if (!req->is_inbound)
+        return next(app, req, res);
+
+    res->status = 255;
+    uint8_t buf[] = {128};
+    fcap_response_append(res, buf, sizeof(buf));
+    fcap_send_response(app, req, res);
+    return FCAP_OK;
 }
 
 struct fcap_middleware handler = { .priv = (void *)1, .on_request = on_req, .on_response = NULL };

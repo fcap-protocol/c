@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/platformio/platformio-core/develop/platformio/assets/schema/library.json",
+  "name": "fcap",
+  "version": "0.1.0",
+  "description": "FCAP C",
+  "keywords": "fcap, fcap-c",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fcap-protocol/c.git"
+  },
+  "authors": [{ "name": "TimPur" }],
+  "license": "MIT",
+  "build": {
+    "flags": ["-I proto", "-I include/transports", "-I include/middleware"],
+    "srcDir": ".",
+    "srcFilter": "+<src> +<proto>"
+  }
+}

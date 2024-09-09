@@ -1,3 +1,5 @@
+#ifdef linux
+
 #include <transports/transport_udp.h>
 
 #include <sys/socket.h>
@@ -90,3 +92,5 @@ void transport_udp_deinit(const void *priv)
 	close(udp->sockfd);
 	udp->sockfd = -1;
 }
+
+#endif
