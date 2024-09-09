@@ -9,8 +9,6 @@
 struct fcap;
 typedef struct fcap *FApp;
 
-
-
 struct fcap_address {
 	uint8_t data[8];
 };

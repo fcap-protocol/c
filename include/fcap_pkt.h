@@ -14,6 +14,7 @@ typedef enum fcap_error {
 	FCAP_EINDEX = 1,
 	FCAP_ENOMEM = 2,
 	FCAP_EINVAL = 3,
+	FCAP_EABORT = 4
 	// FCAP_EEXIST = 2,
 	// FCAP_ENOKEY = 4,
 	// FCAP_ETYPE = 5,

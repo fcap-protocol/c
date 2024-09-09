@@ -78,10 +78,17 @@ FError fcap_send_response(FApp app, FRequest req, FResponse res)
 {
 	FError err;
 
+	if (res->_priv.sent == true)
+		return FCAP_EABORT;
+
 	// run middleware
 	err = fcap_do_res_middleware(app, res);
+	if (err == FCAP_OK)
+		return FCAP_EABORT;
 	if (err && err != FCAP_EINDEX)
 		return err;
+
+	// if err == FCAP_EINDEX then send. Aka if no one aborted or errored, reach end of middleware
 
 	// encode
 	struct fcap_pkt pkt = { .is_response = true, .req = NULL, .res = res };
@@ -102,6 +109,8 @@ FError fcap_send_response(FApp app, FRequest req, FResponse res)
 	// No Data
 	if (ret == 0)
 		return FCAP_EINVAL;
+
+	res->_priv.sent = true;
 
 	return FCAP_OK;
 }
