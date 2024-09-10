@@ -45,6 +45,7 @@ struct fcap {
 	const FMiddleware *middleware;
 	// FEndPoint endpoints[MAX_ENDPOINTS];
 	struct {
+		mid_t mid;
 		bool middleware_dir;
 		uint8_t middleware_i;
 		uint8_t in_buf[MTU];
@@ -55,7 +56,7 @@ typedef struct fcap *FApp;
 
 #define FCAP_CREATE_TRANSPORT(name, type, ptr, rec_fn, send_fn)                                                        \
 	struct type name##_priv;                                                                                       \
-	const struct fcap_transport t_##name = {                                                                       \
+	struct fcap_transport t_##name = {                                                                             \
 		.priv = &name##_priv,                                                                                  \
 		.receive_bytes = rec_fn,                                                                               \
 		.send_bytes = send_fn,                                                                                 \
@@ -81,10 +82,16 @@ typedef struct fcap *FApp;
 
 void fcap_init(FApp app);
 
+void fcap_endpoint_init(FEndpoint endpoint, FTransport transport);
+
 FError fcap_poll(FApp app);
 
-// FError fcap_send_req(FApp app, FRequest req);
+FError fcap_send_request(FApp app, FRequest req);
 
 FError fcap_send_response(FApp app, FRequest req, FResponse res);
+
+void fcap_request_bind(FApp app, FRequest req, FEndpoint endpoint);
+
+// void fcap_response_bind(FApp app, FResponse res, FEndpoint endpoint)
 
 #endif

@@ -3,8 +3,10 @@
 #include "string.h"
 #include "fcap.h"
 
+static FError fcap_send_pkt(FPkt pkt, bytes_t buf, pkt_len_t buf_len);
 static FError fcap_do_req_middleware(FApp app, FRequest req, FResponse res);
 static FError fcap_do_res_middleware(FApp app, FResponse res);
+static mid_t fcap_get_next_mid(FApp app);
 
 void fcap_init(FApp app)
 {
@@ -70,16 +72,48 @@ FError fcap_poll(FApp app)
 	return FCAP_OK;
 }
 
-// FError fcap_send_req(FApp app, FRequest req)
-// {
-// }
+FError fcap_send_request(FApp app, FRequest req)
+{
+	FError err;
+	// validate request
+	if (req->_priv.sent)
+		return FCAP_EABORT;
+	if (req->is_inbound)
+		return FCAP_EABORT;
+	req->_priv.id = fcap_get_next_mid(app);
+	// increment mid
+
+	// run middleware
+	err = fcap_do_req_middleware(app, req, NULL);
+	if (err == FCAP_OK)
+		return FCAP_EABORT;
+	if (err && err != FCAP_EINDEX)
+		return err;
+
+	// send pkt
+	struct fcap_pkt pkt = { .is_response = false, .req = req, .res = NULL };
+	bytes_t buf = app->_priv.out_buf;
+	pkt_len_t buf_len = sizeof(app->_priv.out_buf);
+
+	err = fcap_send_pkt(&pkt, buf, buf_len);
+	if (err)
+		return err;
+
+	req->_priv.sent = true;
+
+	return FCAP_OK;
+}
 
 FError fcap_send_response(FApp app, FRequest req, FResponse res)
 {
 	FError err;
 
-	if (res->_priv.sent == true)
+	// validate response
+	if (res->_priv.sent)
 		return FCAP_EABORT;
+	if (res->is_inbound)
+		return FCAP_EABORT;
+	res->_priv.id = req->_priv.id;
 
 	// run middleware
 	err = fcap_do_res_middleware(app, res);
@@ -87,35 +121,57 @@ FError fcap_send_response(FApp app, FRequest req, FResponse res)
 		return FCAP_EABORT;
 	if (err && err != FCAP_EINDEX)
 		return err;
+	// if err == FCAP_EINDEX then send. Aka if no one aborted or errored, we have reach end of middleware
 
-	// if err == FCAP_EINDEX then send. Aka if no one aborted or errored, reach end of middleware
-
-	// encode
+	// send pkt
 	struct fcap_pkt pkt = { .is_response = true, .req = NULL, .res = res };
-	bytes_t buff = app->_priv.out_buf;
-	pkt_len_t cur_len = 0;
+	bytes_t buf = app->_priv.out_buf;
+	pkt_len_t buf_len = sizeof(app->_priv.out_buf);
 
-	err = fcap_pkt_encode(&pkt, buff, &cur_len, sizeof(app->_priv.out_buf));
+	err = fcap_send_pkt(&pkt, buf, buf_len);
 	if (err)
 		return err;
-
-	// send to transport
-	FTransport transport = res->endpoint->transport;
-	if (transport == NULL)
-		return FCAP_EINVAL;
-	int ret = transport->send_bytes(transport->priv, &res->endpoint->address, buff, cur_len);
-	if (ret < 0)
-		return ret;
-	// No Data
-	if (ret == 0)
-		return FCAP_EINVAL;
 
 	res->_priv.sent = true;
 
 	return FCAP_OK;
 }
 
+void fcap_request_bind(FApp app, FRequest req, FEndpoint endpoint)
+{
+	return fcap_request_init(req, endpoint, app->_priv.out_buf, 0, sizeof(app->_priv.out_buf));
+}
+
+// void fcap_response_bind(FApp app, FResponse res, FEndpoint endpoint)
+// {
+// 	return fcap_response_init(res, endpoint, app->_priv.out_buf, 0, sizeof(app->_priv.out_buf));
+// }
+
 // Private
+
+static FError fcap_send_pkt(FPkt pkt, bytes_t buf, pkt_len_t buf_len)
+{
+	FError err;
+
+	// encode
+	pkt_len_t cur_len = 0;
+	err = fcap_pkt_encode(pkt, buf, &cur_len, buf_len);
+	if (err)
+		return err;
+
+	// send to transport
+	FEndpoint endpoint = !pkt->is_response ? pkt->req->endpoint : pkt->res->endpoint;
+	if (endpoint->transport == NULL)
+		return FCAP_EINVAL;
+	int ret = endpoint->transport->send_bytes(endpoint->transport->priv, &endpoint->address, buf, cur_len);
+	if (ret < 0)
+		return ret;
+	// No Data
+	if (ret == 0)
+		return FCAP_EINVAL;
+
+	return FCAP_OK;
+}
 
 static FError fcap_next_req_middleware(FApp app, FRequest req, FResponse res)
 {
@@ -157,4 +213,12 @@ static FError fcap_do_res_middleware(FApp app, FResponse res)
 	app->_priv.middleware_dir = !res->is_inbound;
 	app->_priv.middleware_i = res->is_inbound ? app->num_middleware - 1 : 0;
 	return fcap_next_res_middleware(app, res);
+}
+
+static mid_t fcap_get_next_mid(FApp app)
+{
+	app->_priv.mid += 1;
+	if (app->_priv.mid == 0) // handle overflow
+		app->_priv.mid += 1;
+	return app->_priv.mid;
 }

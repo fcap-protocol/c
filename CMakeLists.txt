@@ -7,12 +7,14 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_compile_options(-Wall -Werror)
 
-# if ($<CONFIG:MinSizeRel>)
-    # add_compile_options(-Os -ffunction-sections -fdata-sections)
-    # add_link_options(-ffunction-sections -fdata-sections)
-# endif()
+if ($<CONFIG:MinSizeRel>)
+    add_compile_options(-Os -ffunction-sections -fdata-sections)
+    add_link_options(-ffunction-sections -fdata-sections)
+endif()
 
 # Make the FCAP Library
+add_compile_options(-D__unix__)
+
 add_custom_command(
   COMMAND bitproto c proto/fcap.bitproto
   OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/proto/fcap_bp.h ${CMAKE_CURRENT_SOURCE_DIR}/proto/fcap_bp.c
@@ -21,6 +23,8 @@ add_custom_command(
 
 include_directories(proto)
 include_directories(include)
+include_directories(include/transports)
+
 
 add_library(fcap src/fcap.c src/fcap_pkt.c proto/fcap_bp.c proto/bitproto.c)
 

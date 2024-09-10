@@ -86,9 +86,11 @@ pkt_len_t fcap_response_append(FResponse res, bytes_t playload, pkt_len_t len)
 
 FError fcap_pkt_encode(FPkt pkt, bytes_t buf, pkt_len_t *cur_len, pkt_len_t total_len)
 {
+	FPktBuffer pkt_buf;
+	uint8_t header_buf[HEADER_LEN] = {};
 	if (!pkt->is_response) {
-		pkt_len_t len = fcap_pkt_buffer_used(&pkt->req->_priv.buf);
-		uint8_t header_buf[HEADER_LEN] = {};
+		pkt_buf = &pkt->req->_priv.buf;
+		pkt_len_t len = fcap_pkt_buffer_used(pkt_buf);
 		struct PacketRequest pkt_req = {
 			.header = { .version = VERSION_V1,
 				    .is_res = false,
@@ -98,25 +100,23 @@ FError fcap_pkt_encode(FPkt pkt, bytes_t buf, pkt_len_t *cur_len, pkt_len_t tota
 			.cmd = pkt->req->cmd,
 		};
 		EncodePacketRequest(&pkt_req, (bytes_t)&header_buf);
-		if (!fcap_pkt_buffer_append(&pkt->req->_priv.buf, header_buf, sizeof(header_buf)))
-			return FCAP_ENOMEM;
-		fcap_pkt_buffer_deinit(&pkt->req->_priv.buf, buf, cur_len, total_len);
 	} else {
-		pkt_len_t len = fcap_pkt_buffer_used(&pkt->res->_priv.buf);
-		uint8_t header_buf[HEADER_LEN] = {};
+		pkt_buf = &pkt->res->_priv.buf;
+		pkt_len_t len = fcap_pkt_buffer_used(pkt_buf);
 		struct PacketResponse pkt_res = {
 			.header = { .version = VERSION_V1,
-				    .is_res = false,
-				    .reserved = 0,
+				    .is_res = true,
+				    .reserved = 1,
 				    .id = pkt->res->_priv.id,
 				    .len = len },
 			.status = pkt->res->status,
 		};
 		EncodePacketResponse(&pkt_res, (bytes_t)&header_buf);
-		if (!fcap_pkt_buffer_append(&pkt->res->_priv.buf, header_buf, sizeof(header_buf)))
-			return FCAP_ENOMEM;
-		fcap_pkt_buffer_deinit(&pkt->res->_priv.buf, buf, cur_len, total_len);
 	}
+
+	if (!fcap_pkt_buffer_append(pkt_buf, header_buf, sizeof(header_buf)))
+		return FCAP_ENOMEM;
+	fcap_pkt_buffer_deinit(pkt_buf, buf, cur_len, total_len);
 
 	return FCAP_OK;
 }

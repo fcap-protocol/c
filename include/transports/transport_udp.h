@@ -4,6 +4,8 @@
 #include <netinet/ip.h>
 #include <fcap.h>
 
+// #define BYTES_TO_IP_INT(x) (*(uint32_t *)(unsigned char[4])(x))
+
 struct transport_udp {
 	int sockfd;
 	struct sockaddr_in server_addr;
@@ -17,13 +19,15 @@ typedef struct transport_udp *FTransportUdp;
  * @param server_port the port to listen to
  * @returns 0 on success or -errno on failure
 */
-int transport_udp_init(const void *priv, uint16_t server_port);
+int transport_udp_init(FTransportUdp udp, uint16_t server_port);
 
 /**
  * @brief closes the socket, should be called on shutdown
- * @param priv the udp transport struct
+ * @param udp the udp transport struct
 */
-void transport_udp_deinit(const void *priv);
+void transport_udp_deinit(FTransportUdp udp);
+
+void transport_udp_endpoint_bind(FTransport transport, FEndpoint endpoint, in_addr_t addr, uint16_t port);
 
 /**
  * @brief get bytes function as per fcap.h spec
