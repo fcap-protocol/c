@@ -1,41 +1,53 @@
 #include "string.h"
 #include "fcap_pkt.h"
 
-static pkt_len_t fcap_pkt_buffer_remaining(FPktBuffer pkt_buf)
+static pkt_len_t fcap_pkt_buffer_total_len(FPktBuffer pkt_buf)
+{
+	return pkt_buf->buf_end - pkt_buf->buf_start;
+}
+
+static pkt_len_t fcap_pkt_buffer_remaining_len(FPktBuffer pkt_buf)
 {
 	return pkt_buf->buf_cur - pkt_buf->buf_start;
 }
 
-static pkt_len_t fcap_pkt_buffer_used(FPktBuffer pkt_buf)
+static pkt_len_t fcap_pkt_buffer_used_len(FPktBuffer pkt_buf)
 {
 	return pkt_buf->buf_end - pkt_buf->buf_cur;
 }
 
-bytes_t fcap_pkt_buffer_alloc(FPktBuffer pkt_buf, pkt_len_t len)
+static bytes_t fcap_pkt_buffer_alloc(FPktBuffer pkt_buf, pkt_len_t len)
 {
-	pkt_len_t remaining = fcap_pkt_buffer_remaining(pkt_buf);
+	pkt_len_t remaining = fcap_pkt_buffer_remaining_len(pkt_buf);
 	if (remaining < len)
 		return NULL;
 	pkt_buf->buf_cur -= len;
 	return pkt_buf->buf_cur;
 }
 
-pkt_len_t fcap_pkt_buffer_free(FPktBuffer pkt_buf, pkt_len_t len)
+static pkt_len_t fcap_pkt_buffer_free(FPktBuffer pkt_buf, pkt_len_t len)
 {
-	pkt_len_t used = fcap_pkt_buffer_used(pkt_buf);
+	pkt_len_t used = fcap_pkt_buffer_used_len(pkt_buf);
 	if (used < len)
 		return 0;
 	pkt_buf->buf_cur += len;
 	return len;
 }
 
-pkt_len_t fcap_pkt_buffer_append(FPktBuffer pkt_buf, bytes_t buf, pkt_len_t len)
+static pkt_len_t fcap_pkt_buffer_append(FPktBuffer pkt_buf, bytes_t buf, pkt_len_t len)
 {
 	bytes_t pkt_cur = fcap_pkt_buffer_alloc(pkt_buf, len);
 	if (!pkt_cur)
 		return 0;
 	memcpy(pkt_cur, buf, len);
 	return len;
+}
+
+static pkt_len_t fcap_pkt_buffer_set(FPktBuffer pkt_buf, bytes_t buf, pkt_len_t len)
+{
+	pkt_buf->buf_cur = pkt_buf->buf_end; // reset len
+
+	return fcap_pkt_buffer_append(pkt_buf, buf, len);
 }
 
 static bool fcap_pkt_buffer_init(FPktBuffer pkt_buf, bytes_t buf, pkt_len_t cur_len, pkt_len_t total_len)
@@ -53,10 +65,12 @@ static bool fcap_pkt_buffer_init(FPktBuffer pkt_buf, bytes_t buf, pkt_len_t cur_
 	return true;
 }
 
-static void fcap_pkt_buffer_deinit(FPktBuffer pkt_buf, bytes_t buf, pkt_len_t *cur_len, pkt_len_t total_len)
+static void fcap_pkt_buffer_deinit(FPktBuffer pkt_buf, bytes_t *buf, pkt_len_t *cur_len, pkt_len_t *total_len)
 {
-	*cur_len = fcap_pkt_buffer_used(pkt_buf);
-	memmove(buf, pkt_buf->buf_cur, *cur_len);
+	*buf = pkt_buf->buf_start;
+	*cur_len = fcap_pkt_buffer_used_len(pkt_buf);
+	*total_len = fcap_pkt_buffer_total_len(pkt_buf);
+	memmove(*buf, pkt_buf->buf_cur, *cur_len);
 	memset(pkt_buf, 0, sizeof(struct pkt_buffer));
 }
 
@@ -74,23 +88,34 @@ void fcap_response_init(FResponse res, FEndpoint endpoint, bytes_t buf, pkt_len_
 	fcap_pkt_buffer_init(&res->_priv.buf, buf, cur_len, total_len);
 }
 
-pkt_len_t fcap_request_append(FRequest req, bytes_t playload, pkt_len_t len)
+pkt_len_t fcap_request_payload_append(FRequest req, bytes_t playload, pkt_len_t len)
 {
 	return fcap_pkt_buffer_append(&req->_priv.buf, playload, len);
 }
 
-pkt_len_t fcap_response_append(FResponse res, bytes_t playload, pkt_len_t len)
+pkt_len_t fcap_response_payload_append(FResponse res, bytes_t playload, pkt_len_t len)
 {
 	return fcap_pkt_buffer_append(&res->_priv.buf, playload, len);
 }
 
-FError fcap_pkt_encode(FPkt pkt, bytes_t buf, pkt_len_t *cur_len, pkt_len_t total_len)
+pkt_len_t fcap_request_payload_set(FRequest req, bytes_t playload, pkt_len_t len)
+{
+	return fcap_pkt_buffer_set(&req->_priv.buf, playload, len);
+}
+pkt_len_t fcap_response_payload_set(FResponse res, bytes_t playload, pkt_len_t len)
+{
+	return fcap_pkt_buffer_set(&res->_priv.buf, playload, len);
+}
+
+FError fcap_pkt_encode(FPkt pkt, bytes_t *buf, pkt_len_t *cur_len, pkt_len_t *total_len)
 {
 	FPktBuffer pkt_buf;
 	uint8_t header_buf[HEADER_LEN] = {};
 	if (!pkt->is_response) {
 		pkt_buf = &pkt->req->_priv.buf;
-		pkt_len_t len = fcap_pkt_buffer_used(pkt_buf);
+		pkt_len_t len = fcap_pkt_buffer_used_len(pkt_buf);
+		if (len > BODY_LEN)
+			return FCAP_ENOMEM;
 		struct PacketRequest pkt_req = {
 			.header = { .version = VERSION_V1,
 				    .is_res = false,
@@ -102,7 +127,9 @@ FError fcap_pkt_encode(FPkt pkt, bytes_t buf, pkt_len_t *cur_len, pkt_len_t tota
 		EncodePacketRequest(&pkt_req, (bytes_t)&header_buf);
 	} else {
 		pkt_buf = &pkt->res->_priv.buf;
-		pkt_len_t len = fcap_pkt_buffer_used(pkt_buf);
+		pkt_len_t len = fcap_pkt_buffer_used_len(pkt_buf);
+		if (len > BODY_LEN)
+			return FCAP_ENOMEM;
 		struct PacketResponse pkt_res = {
 			.header = { .version = VERSION_V1,
 				    .is_res = true,
@@ -123,7 +150,9 @@ FError fcap_pkt_encode(FPkt pkt, bytes_t buf, pkt_len_t *cur_len, pkt_len_t tota
 
 FError fcap_pkt_decode(FPkt pkt, FEndpoint endpoint, bytes_t buf, pkt_len_t cur_len, pkt_len_t total_len)
 {
-	// memset(pkt, 0, sizeof(struct fcap_pkt));
+	// check max mtu size
+	if (cur_len > MTU)
+		return FCAP_ENOMEM;
 
 	// Check header length
 	if (cur_len < HEADER_LEN)
@@ -137,7 +166,7 @@ FError fcap_pkt_decode(FPkt pkt, FEndpoint endpoint, bytes_t buf, pkt_len_t cur_
 
 	// Check body len
 	pkt_len_t body_len = cur_len - HEADER_LEN;
-	if (body_len != header.len)
+	if (body_len > BODY_LEN)
 		return FCAP_EINVAL;
 
 	pkt->is_response = header.is_res;

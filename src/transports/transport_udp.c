@@ -57,7 +57,7 @@ int transport_udp_receive_bytes(const void *priv, FAddress addr, bytes_t bytes, 
 {
 	FTransportUdp udp = (FTransportUdp)priv;
 
-	struct sockaddr_in soc_addr;
+	struct sockaddr_in soc_addr = {};
 	socklen_t soc_addr_len = sizeof(soc_addr);
 	int ret = recvfrom(udp->sockfd, bytes, length, MSG_DONTWAIT, (struct sockaddr *)&soc_addr, &soc_addr_len);
 
@@ -79,7 +79,8 @@ int transport_udp_send_bytes(const void *priv, FAddress addr, bytes_t bytes, siz
 	FTransportUdp udp = (FTransportUdp)priv;
 
 	// Copy addr + port = 6 bytes
-	struct sockaddr_in soc_addr;
+	struct sockaddr_in soc_addr = {};
+	// soc_addr.sin_len = 0x10;
 	soc_addr.sin_family = AF_INET;
 	memcpy(&soc_addr.sin_addr, &addr->data[0], sizeof(soc_addr.sin_addr));
 	memcpy(&soc_addr.sin_port, &addr->data[sizeof(soc_addr.sin_addr)], sizeof(soc_addr.sin_port));

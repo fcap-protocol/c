@@ -4,6 +4,10 @@ const MTU = 255;
 const HEADER_LEN = 5;
 const BODY_LEN = MTU - HEADER_LEN;
 
+const MAX_MESSAGE_ID = 4095
+const MAX_BODY_LEN = 4095
+const MAX_MTU_LEN = MAX_BODY_LEN + HEADER_LEN
+
 // type Body = byte[BODY_LEN]
 
 enum Version : uint3 {

@@ -13,13 +13,18 @@ FError on_req(const void *priv, FApp app, FRequest req, FResponse res, NextReq n
 		return next(app, req, res);
 
 	res->status = 255;
-	uint8_t buf[] = { 128 };
-	fcap_response_append(res, buf, sizeof(buf));
+	uint8_t buf[] = { 127 };
+	fcap_response_payload_append(res, buf, sizeof(buf));
 	fcap_send_response(app, req, res);
 	return FCAP_OK;
 }
 
-struct fcap_middleware handler = { .priv = (void *)1, .on_request = on_req, .on_response = NULL };
+FError on_res(const void *priv, FApp app, FResponse res, NextRes next)
+{
+		return next(app, res);
+}
+
+struct fcap_middleware handler = { .priv = (void *)1, .on_request = on_req, .on_response = on_res };
 
 FCAP_SET_MIDDLEWARE(middleware, &handler);
 
@@ -37,7 +42,7 @@ int main()
 	struct fcap_request req;
 	fcap_request_bind(app, &req, &server);
 	req.cmd = 101;
-	fcap_request_append(&req, (bytes_t)(&(uint8_t[]){ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }), 10);
+	fcap_request_payload_append(&req, (bytes_t)(&(uint8_t[]){ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }), 10);
 
 	fcap_send_request(app, &req);
 

@@ -64,10 +64,13 @@ typedef struct fcap_pkt *FPkt;
 void fcap_request_init(FRequest req, FEndpoint endpoint, bytes_t buf, pkt_len_t cur_len, pkt_len_t total_len);
 void fcap_response_init(FResponse res, FEndpoint endpoint, bytes_t buf, pkt_len_t cur_len, pkt_len_t total_len);
 
-pkt_len_t fcap_request_append(FRequest req, bytes_t playload, pkt_len_t len);
-pkt_len_t fcap_response_append(FResponse res, bytes_t playload, pkt_len_t len);
+pkt_len_t fcap_request_payload_append(FRequest req, bytes_t playload, pkt_len_t len);
+pkt_len_t fcap_response_payload_append(FResponse res, bytes_t playload, pkt_len_t len);
 
-FError fcap_pkt_encode(FPkt pkt, bytes_t buf, pkt_len_t *cur_len, pkt_len_t total_len);
+pkt_len_t fcap_request_payload_set(FRequest req, bytes_t playload, pkt_len_t len);
+pkt_len_t fcap_response_payload_set(FResponse res, bytes_t playload, pkt_len_t len);
+
+FError fcap_pkt_encode(FPkt pkt, bytes_t *buf, pkt_len_t *cur_len, pkt_len_t *total_len);
 FError fcap_pkt_decode(FPkt pkt, FEndpoint endpoint, bytes_t buf, pkt_len_t cur_len, pkt_len_t total_len);
 
 #endif

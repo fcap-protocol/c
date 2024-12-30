@@ -22,6 +22,12 @@ extern "C" {
 
 #define BODY_LEN 250
 
+#define MAX_MESSAGE_ID 4095
+
+#define MAX_BODY_LEN 4095
+
+#define MAX_MTU_LEN 4100
+
 typedef uint8_t Version; // 3bit
 
 #define VERSION_V1 0

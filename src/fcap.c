@@ -3,7 +3,7 @@
 #include "string.h"
 #include "fcap.h"
 
-static FError fcap_send_pkt(FPkt pkt, bytes_t buf, pkt_len_t buf_len);
+static FError fcap_send_pkt(FPkt pkt);
 static FError fcap_do_req_middleware(FApp app, FRequest req, FResponse res);
 static FError fcap_do_res_middleware(FApp app, FResponse res);
 static mid_t fcap_get_next_mid(FApp app);
@@ -92,10 +92,10 @@ FError fcap_send_request(FApp app, FRequest req)
 
 	// send pkt
 	struct fcap_pkt pkt = { .is_response = false, .req = req, .res = NULL };
-	bytes_t buf = app->_priv.out_buf;
-	pkt_len_t buf_len = sizeof(app->_priv.out_buf);
+	// bytes_t buf = app->_priv.out_buf;
+	// pkt_len_t buf_len = sizeof(app->_priv.out_buf);
 
-	err = fcap_send_pkt(&pkt, buf, buf_len);
+	err = fcap_send_pkt(&pkt);
 	if (err)
 		return err;
 
@@ -125,10 +125,10 @@ FError fcap_send_response(FApp app, FRequest req, FResponse res)
 
 	// send pkt
 	struct fcap_pkt pkt = { .is_response = true, .req = NULL, .res = res };
-	bytes_t buf = app->_priv.out_buf;
-	pkt_len_t buf_len = sizeof(app->_priv.out_buf);
+	// bytes_t buf = app->_priv.out_buf;
+	// pkt_len_t buf_len = sizeof(app->_priv.out_buf);
 
-	err = fcap_send_pkt(&pkt, buf, buf_len);
+	err = fcap_send_pkt(&pkt);
 	if (err)
 		return err;
 
@@ -149,13 +149,15 @@ void fcap_request_bind(FApp app, FRequest req, FEndpoint endpoint)
 
 // Private
 
-static FError fcap_send_pkt(FPkt pkt, bytes_t buf, pkt_len_t buf_len)
+static FError fcap_send_pkt(FPkt pkt)
 {
 	FError err;
 
 	// encode
+	bytes_t buf = NULL;
+	pkt_len_t buf_len = 0;
 	pkt_len_t cur_len = 0;
-	err = fcap_pkt_encode(pkt, buf, &cur_len, buf_len);
+	err = fcap_pkt_encode(pkt, &buf, &cur_len, &buf_len);
 	if (err)
 		return err;
 
@@ -217,8 +219,12 @@ static FError fcap_do_res_middleware(FApp app, FResponse res)
 
 static mid_t fcap_get_next_mid(FApp app)
 {
-	app->_priv.mid += 1;
-	if (app->_priv.mid == 0) // handle overflow
+	// handle overflow
+	if (app->_priv.mid == 0)
+		app->_priv.mid = 1;
+	else if (app->_priv.mid > MAX_MESSAGE_ID)
+		app->_priv.mid = 1;
+	else
 		app->_priv.mid += 1;
 	return app->_priv.mid;
 }
