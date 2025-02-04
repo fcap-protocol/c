@@ -3,6 +3,10 @@
 #include "string.h"
 #include "fcap.h"
 
+void FCAP_DEBUG(const char *format, ...)
+{
+}
+
 static FError fcap_send_pkt(FPkt pkt);
 static FError fcap_do_req_middleware(FApp app, FRequest req, FResponse res);
 static FError fcap_do_res_middleware(FApp app, FResponse res);
@@ -11,8 +15,11 @@ static mid_t fcap_get_next_mid(FApp app);
 void fcap_init(FApp app)
 {
 	// memset(app->_priv.endpoints, 0, sizeof(app->endpoints));
-	memset(app->_priv.in_buf, 0, sizeof(app->_priv.in_buf));
-	memset(app->_priv.out_buf, 0, sizeof(app->_priv.out_buf));
+	// memset(app->_priv.in_buf, 0, sizeof(app->_priv.in_buf));
+	// memset(app->_priv.out_buf, 0, sizeof(app->_priv.out_buf));
+	memset(&app->_priv, 0, sizeof(app->_priv));
+
+	FCAP_DEBUG("App mid: %u\n", app->_priv.mid);
 }
 
 void fcap_endpoint_init(FEndpoint endpoint, FTransport transport)
@@ -76,19 +83,31 @@ FError fcap_send_request(FApp app, FRequest req)
 {
 	FError err;
 	// validate request
-	if (req->_priv.sent)
+	if (req->_priv.sent) {
+		FCAP_DEBUG("Error: Request already sent\n");
 		return FCAP_EABORT;
-	if (req->is_inbound)
+	}
+	if (req->is_inbound) {
+		FCAP_DEBUG("Error: Request is inbound\n");
 		return FCAP_EABORT;
+	}
+	// get and increment mid
 	req->_priv.id = fcap_get_next_mid(app);
-	// increment mid
+
+	FCAP_DEBUG("Sending Request: %hu\n", req->_priv.id);
 
 	// run middleware
 	err = fcap_do_req_middleware(app, req, NULL);
-	if (err == FCAP_OK)
+	if (err == FCAP_OK) {
+		FCAP_DEBUG("Error: Ran middleware and aborted\n");
 		return FCAP_EABORT;
-	if (err && err != FCAP_EINDEX)
+	}
+	if (err && err != FCAP_EINDEX) {
+		FCAP_DEBUG("Error: Ran middleware and Errored: %u\n", err);
 		return err;
+	}
+
+	FCAP_DEBUG("Ran middleware and sending request\n");
 
 	// send pkt
 	struct fcap_pkt pkt = { .is_response = false, .req = req, .res = NULL };
@@ -96,11 +115,14 @@ FError fcap_send_request(FApp app, FRequest req)
 	// pkt_len_t buf_len = sizeof(app->_priv.out_buf);
 
 	err = fcap_send_pkt(&pkt);
-	if (err)
+	if (err) {
+		FCAP_DEBUG("Error: Request failed to send: %u\n", err);
 		return err;
+	}
 
 	req->_priv.sent = true;
 
+	FCAP_DEBUG("Request Sent: %hu\n", req->_priv.id);
 	return FCAP_OK;
 }
 
@@ -109,19 +131,31 @@ FError fcap_send_response(FApp app, FRequest req, FResponse res)
 	FError err;
 
 	// validate response
-	if (res->_priv.sent)
+	if (res->_priv.sent) {
+		FCAP_DEBUG("Error: Response already sent\n");
 		return FCAP_EABORT;
-	if (res->is_inbound)
+	}
+	if (res->is_inbound) {
+		FCAP_DEBUG("Error: Response is inbound\n");
 		return FCAP_EABORT;
+	}
 	res->_priv.id = req->_priv.id;
+
+	FCAP_DEBUG("Sending Request: %hu\n", req->_priv.id);
 
 	// run middleware
 	err = fcap_do_res_middleware(app, res);
-	if (err == FCAP_OK)
+	if (err == FCAP_OK) {
+		FCAP_DEBUG("Error: Ran middleware and aborted\n");
 		return FCAP_EABORT;
-	if (err && err != FCAP_EINDEX)
+	}
+	if (err && err != FCAP_EINDEX) {
+		FCAP_DEBUG("Error: Ran middleware and Errored: %u\n", err);
 		return err;
+	}
 	// if err == FCAP_EINDEX then send. Aka if no one aborted or errored, we have reach end of middleware
+
+	FCAP_DEBUG("Ran middleware and sending response\n");
 
 	// send pkt
 	struct fcap_pkt pkt = { .is_response = true, .req = NULL, .res = res };
@@ -129,11 +163,14 @@ FError fcap_send_response(FApp app, FRequest req, FResponse res)
 	// pkt_len_t buf_len = sizeof(app->_priv.out_buf);
 
 	err = fcap_send_pkt(&pkt);
-	if (err)
+	if (err) {
+		FCAP_DEBUG("Error: Response failed to send: %u\n", err);
 		return err;
+	}
 
 	res->_priv.sent = true;
 
+	FCAP_DEBUG("Response Sent: %hu\n", req->_priv.id);
 	return FCAP_OK;
 }
 
@@ -165,6 +202,9 @@ static FError fcap_send_pkt(FPkt pkt)
 	FEndpoint endpoint = !pkt->is_response ? pkt->req->endpoint : pkt->res->endpoint;
 	if (endpoint->transport == NULL)
 		return FCAP_EINVAL;
+
+	FCAP_DEBUG("Sending: %hu bytes\n", cur_len);
+
 	int ret = endpoint->transport->send_bytes(endpoint->transport->priv, &endpoint->address, buf, cur_len);
 	if (ret < 0)
 		return ret;
@@ -190,7 +230,7 @@ static FError fcap_next_req_middleware(FApp app, FRequest req, FResponse res)
 static FError fcap_do_req_middleware(FApp app, FRequest req, FResponse res)
 {
 	if (!app->num_middleware)
-		return FCAP_OK;
+		return FCAP_EINDEX;
 	app->_priv.middleware_dir = !req->is_inbound;
 	app->_priv.middleware_i = req->is_inbound ? app->num_middleware - 1 : 0;
 	return fcap_next_req_middleware(app, req, res);
@@ -211,7 +251,7 @@ static FError fcap_next_res_middleware(FApp app, FResponse res)
 static FError fcap_do_res_middleware(FApp app, FResponse res)
 {
 	if (!app->num_middleware)
-		return FCAP_OK;
+		return FCAP_EINDEX;
 	app->_priv.middleware_dir = !res->is_inbound;
 	app->_priv.middleware_i = res->is_inbound ? app->num_middleware - 1 : 0;
 	return fcap_next_res_middleware(app, res);

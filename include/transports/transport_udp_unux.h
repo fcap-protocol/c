@@ -1,10 +1,10 @@
+#ifdef __unix__
 #ifndef TRANSPORT_UDP_H
 #define TRANSPORT_UDP_H
 
-#include <netinet/ip.h>
 #include <fcap.h>
 
-// #define BYTES_TO_IP_INT(x) (*(uint32_t *)(unsigned char[4])(x))
+#include <netinet/ip.h>
 
 struct transport_udp {
 	int sockfd;
@@ -42,4 +42,5 @@ int transport_udp_send_bytes(const void *priv, FAddress addr, bytes_t bytes, siz
 #define FCAP_CREATE_UDP_TRANSPORT(name)                                                                                \
 	FCAP_CREATE_TRANSPORT(name, transport_udp, FTransportUdp, transport_udp_receive_bytes, transport_udp_send_bytes)
 
+#endif
 #endif

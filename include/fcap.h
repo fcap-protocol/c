@@ -6,6 +6,8 @@
 
 // #define MAX_ENDPOINTS 2
 
+__attribute__((weak)) void FCAP_DEBUG(const char *format, ...);
+
 struct fcap;
 typedef struct fcap *FApp;
 
@@ -53,6 +55,8 @@ struct fcap {
 	} _priv;
 };
 typedef struct fcap *FApp;
+
+#define BYTES_TO_IP_INT(x) (*(uint32_t *)(uint8_t *)x)
 
 #define FCAP_CREATE_TRANSPORT(name, type, ptr, rec_fn, send_fn)                                                        \
 	struct type name##_priv;                                                                                       \
